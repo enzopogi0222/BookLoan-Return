@@ -3,6 +3,8 @@ package com.mycompany.bookloanandreturn.View;
 import java.awt.Color;
 import java.awt.GridLayout;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -78,6 +80,21 @@ public class AddBookView {
 
         frame.add(panel);
         frame.setLocationRelativeTo(null);
+    }
+
+    /**
+     * Register a callback to run when this window is closed (X or dispose).
+     * Use this to e.g. show the main menu again.
+     */
+    public void setOnWindowClose(Runnable onClose) {
+        if (onClose != null) {
+            frame.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowClosed(WindowEvent e) {
+                    onClose.run();
+                }
+            });
+        }
     }
 
     private ActionListener addBookListener;

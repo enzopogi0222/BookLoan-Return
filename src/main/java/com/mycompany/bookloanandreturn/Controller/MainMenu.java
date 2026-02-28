@@ -14,7 +14,8 @@ public class MainMenu {
     }
 
     private void openAddBook() {
-        new AddBook();
+        view.hide();
+        new AddBook(() -> view.show());
     }
 
     private void openViewBook() {

@@ -15,10 +15,19 @@ import java.sql.SQLException;
 public class AddBook implements ActionListener {
     private final AddBookView view;
 
-    public AddBook() {
+    /** Opens Add Book; when the window is closed, onReturnToMenu is run (e.g. show main menu). */
+    public AddBook(Runnable onReturnToMenu) {
         view = new AddBookView();
         view.addAddBookListener(this);
+        if (onReturnToMenu != null) {
+            view.setOnWindowClose(() -> SwingUtilities.invokeLater(onReturnToMenu));
+        }
         SwingUtilities.invokeLater(() -> view.show());
+    }
+
+    /** Opens Add Book with no "return" callback (e.g. when not launched from main menu). */
+    public AddBook() {
+        this(null);
     }
 
     @Override

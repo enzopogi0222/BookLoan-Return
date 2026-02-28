@@ -84,6 +84,11 @@ public class MainMenuView {
         frame.setVisible(true);
     }
 
+    /** Hide this window (e.g. when opening Add Book). Call show() to display again. */
+    public void hide() {
+        frame.setVisible(false);
+    }
+
     public JFrame getFrame() {
         return frame;
     }
