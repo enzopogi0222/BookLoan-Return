@@ -37,11 +37,21 @@ private void loadBooks(){
         ResultSet rs = ps.executeQuery();
         while(rs.next()){
             Book book = new Book();
-            book.setBookName(rs.getString("bookName"));
-            book.setAuthor(rs.getString("author"));
-            book.setGenre(rs.getString("genre"));
-            book.setPublishedYear(rs.getString("published_year"));
-            book.setStock(rs.getInt("stock"));
+            String bookName = rs.getString("bookName");
+            String author = rs.getString("author");
+            String genre = rs.getString("genre");
+            String publishedYear = rs.getString("published_year");
+            int stock = rs.getInt("stock");
+            if (bookName == null || bookName.trim().isEmpty()) bookName = "—";
+            if (author == null || author.trim().isEmpty() || !author.matches("^[a-zA-Z\\s]+$")) author = "Unknown";
+            if (genre == null || genre.trim().isEmpty()) genre = "—";
+            if (publishedYear == null || !publishedYear.matches("\\d+")) publishedYear = "0";
+            if (stock < 0) stock = 0;
+            book.setBookName(bookName);
+            book.setAuthor(author);
+            book.setGenre(genre);
+            book.setPublishedYear(publishedYear);
+            book.setStock(stock == 0 ? 1 : stock);
             books.add(book);
         }
         rs.close();
