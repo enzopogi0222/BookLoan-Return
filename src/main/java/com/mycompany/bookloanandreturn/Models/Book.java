@@ -15,6 +15,9 @@ public class Book {
    }
    
    public void setBookName(String bookName){
+    if (bookName == null || bookName.trim().isEmpty()){
+        throw new IllegalArgumentException("Book Name cannot be empty");
+    }
        this.bookName = bookName;
    }
    
@@ -23,6 +26,14 @@ public class Book {
    }
    
    public void setAuthor(String author){
+       if (author == null || author.trim().isEmpty()){
+        throw new IllegalArgumentException("Author cannot be empty");
+       }
+
+       if (author.matches("^[a-zA-Z]+$")){
+        throw new IllegalArgumentException("Author must contain only letters");
+       }
+
        this.author = author;
    }
    
@@ -31,6 +42,9 @@ public class Book {
    }
 
    public void setGenre(String genre){
+    if (genre == null || genre.trim().isEmpty()){
+        throw new IllegalArgumentException("Genre cannot be empty");
+    }
         this.genre = genre;
    }
    public String getPublishedYear(){
@@ -38,6 +52,9 @@ public class Book {
    }
    
    public void setPublishedYear(String published_year){
+    if (published_year == null || !published_year.matches("\\d+")){
+        throw new IllegalArgumentException("Published Year must be contains only numbers");
+    }
        this.published_year = published_year;
    }
    
@@ -46,6 +63,9 @@ public class Book {
    }
    
    public void setStock(int stock){
+    if (stock <= 0){
+        throw new IllegalArgumentException("Stock must be greater than 0");
+    } 
        this.stock = stock;
    }
            

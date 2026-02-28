@@ -48,7 +48,7 @@ public class AddBook {
             ps.setInt(5, book.getStock());
             
             int rowsInserted = ps.executeUpdate();
-            if (rowsInserted > 2) {
+            if (rowsInserted > 0) {
                 System.out.println("Book Added Successfully");
             }
             ps.close();
