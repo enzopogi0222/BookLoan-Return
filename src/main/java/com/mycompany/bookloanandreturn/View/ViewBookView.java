@@ -3,20 +3,26 @@ package com.mycompany.bookloanandreturn.View;
 import com.mycompany.bookloanandreturn.Models.Book;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.FlowLayout;
 import java.awt.event.ActionListener;
 import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 
 public class ViewBookView {
     private final JFrame frame;
     private final JTable table;
     private final DefaultTableModel tableModel;
+    private final JTextField searchField;
     private static final String[] COLUMN_NAMES = {"Book Name", "Author", "Genre", "Published Year", "Stock"};
 
     public ViewBookView(){
@@ -40,6 +46,23 @@ public class ViewBookView {
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBackground(new Color(200, 230, 201));
 
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        searchPanel.setBackground(new Color(200, 230, 201));
+        JLabel searchLabel = new JLabel("Search:");
+        searchLabel.setForeground(new Color(27, 94, 32));
+        searchField = new JTextField(25);
+        searchField.setBackground(Color.WHITE);
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) { fireFilterRequested(); }
+            @Override
+            public void removeUpdate(DocumentEvent e) { fireFilterRequested(); }
+            @Override
+            public void changedUpdate(DocumentEvent e) { fireFilterRequested(); }
+        });
+        searchPanel.add(searchLabel);
+        searchPanel.add(searchField);
+
         JButton refreshButton = new JButton("Refresh");
         refreshButton.setBackground(new Color(46, 125, 50));
         refreshButton.setForeground(Color.WHITE);
@@ -53,6 +76,7 @@ public class ViewBookView {
 
         JPanel mainPanel = new JPanel(new BorderLayout(5, 5));
         mainPanel.setBackground(new Color(200, 230, 201));
+        mainPanel.add(searchPanel, BorderLayout.NORTH);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
@@ -61,14 +85,29 @@ public class ViewBookView {
     }
 
 private ActionListener refreshListener;
+private ActionListener filterListener;
 
 public void addRefreshListener(ActionListener listener){
     this.refreshListener = listener;
 }
 
+public void addFilterListener(ActionListener listener){
+    this.filterListener = listener;
+}
+
+public String getSearchText() {
+    return searchField.getText().trim();
+}
+
 private void fireRefreshRequested(){
     if (refreshListener != null) {
         refreshListener.actionPerformed(null);
+    }
+}
+
+private void fireFilterRequested(){
+    if (filterListener != null) {
+        filterListener.actionPerformed(null);
     }
 }
 

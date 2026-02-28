@@ -15,20 +15,44 @@ import javax.swing.SwingUtilities;
 
 public class ViewBook implements ActionListener {
     private final ViewBookView view;
+    private List<Book> currentBooks = new ArrayList<>();
 
     public ViewBook() {
         view = new ViewBookView();
         view.addRefreshListener(this);
+        view.addFilterListener(e -> applyFilter());
         loadBooks();
         SwingUtilities.invokeLater(() -> view.show());
-}
+    }
 
-@Override
-public void actionPerformed(ActionEvent e) {
-    loadBooks();
-}
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        loadBooks();
+    }
 
-private void loadBooks(){
+    private void applyFilter() {
+        String query = view.getSearchText().toLowerCase();
+        if (query.isEmpty()) {
+            view.displayBooks(currentBooks);
+            return;
+        }
+        List<Book> filtered = new ArrayList<>();
+        for (Book b : currentBooks) {
+            if (matchesSearch(b, query)) {
+                filtered.add(b);
+            }
+        }
+        view.displayBooks(filtered);
+    }
+
+    private boolean matchesSearch(Book b, String query) {
+        return (b.getBookName() != null && b.getBookName().toLowerCase().contains(query))
+                || (b.getAuthor() != null && b.getAuthor().toLowerCase().contains(query))
+                || (b.getGenre() != null && b.getGenre().toLowerCase().contains(query))
+                || (b.getPublishedYear() != null && b.getPublishedYear().contains(query));
+    }
+
+    private void loadBooks(){
     String sql = "SELECT bookName, author, genre, published_year, stock FROM book";
     List<Book> books = new ArrayList<>();
     try {
@@ -57,7 +81,8 @@ private void loadBooks(){
         rs.close();
         ps.close();
         conn.close();
-        view.displayBooks(books);
+        currentBooks = books;
+        applyFilter();
 
     } catch (SQLException ex) {
         view.showError("Database error: " + ex.getMessage());
