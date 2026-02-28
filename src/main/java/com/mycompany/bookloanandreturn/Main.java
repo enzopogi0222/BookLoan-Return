@@ -2,11 +2,11 @@
 
 package com.mycompany.bookloanandreturn;
 
-import com.mycompany.bookloanandreturn.Controller.AddBook;
+import com.mycompany.bookloanandreturn.Controller.MainMenu;
 
 public class Main {
 
     public static void main(String[] args) {
-        AddBook addBook = new AddBook();
+        new MainMenu();
     }
 }
