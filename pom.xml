@@ -14,9 +14,21 @@
     </dependency>
     
     </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <mainClass>com.mycompany.bookloanandreturn.Main</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>23</maven.compiler.release>
-        <exec.mainClass>com.mycompany.bookloanandreturn.BookLoanAndReturn</exec.mainClass>
+        <exec.mainClass>com.mycompany.bookloanandreturn.Main</exec.mainClass>
     </properties>
 </project>

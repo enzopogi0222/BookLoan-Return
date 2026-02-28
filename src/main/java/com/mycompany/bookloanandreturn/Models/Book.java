@@ -30,7 +30,7 @@ public class Book {
         throw new IllegalArgumentException("Author cannot be empty");
        }
 
-       if (author.matches("^[a-zA-Z]+$")){
+       if (!author.matches("^[a-zA-Z\\s]+$")){
         throw new IllegalArgumentException("Author must contain only letters");
        }
 
