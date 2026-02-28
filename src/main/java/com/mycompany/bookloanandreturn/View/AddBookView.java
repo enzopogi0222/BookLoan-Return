@@ -26,7 +26,7 @@ public class AddBookView {
     public AddBookView() {
         frame = new JFrame("Add Book");
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setSize(400, 320);
+        frame.setSize(520, 420);
         frame.getContentPane().setBackground(new Color(200, 230, 201)); // light green
 
         JPanel panel = new JPanel(new GridLayout(6, 2, 5, 10));

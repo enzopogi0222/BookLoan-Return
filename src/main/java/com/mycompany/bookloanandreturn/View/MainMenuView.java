@@ -24,7 +24,7 @@ public class MainMenuView {
     public MainMenuView() {
         frame = new JFrame("Book Loan and Return - Main Menu");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(420, 280);
+        frame.setSize(520, 360);
         frame.getContentPane().setBackground(new Color(200, 230, 201));
 
         Color darkGreen = new Color(27, 94, 32);

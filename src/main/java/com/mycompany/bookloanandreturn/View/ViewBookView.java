@@ -22,7 +22,7 @@ public class ViewBookView {
     public ViewBookView(){
         frame = new JFrame("View Books");
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setSize(700, 400);
+        frame.setSize(900, 520);
         frame.getContentPane().setBackground(new Color(200, 230, 201));
 
         tableModel = new DefaultTableModel(COLUMN_NAMES, 0) {
