@@ -55,6 +55,10 @@ public class Book {
     if (published_year == null || !published_year.matches("\\d+")){
         throw new IllegalArgumentException("Published Year must be contains only numbers");
     }
+    int year = Integer.parseInt(published_year);
+    if (year < 0){
+        throw new IllegalArgumentException("Published Year cannot be less than zero");
+    }
        this.published_year = published_year;
    }
    
