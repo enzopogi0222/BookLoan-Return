@@ -16,13 +16,29 @@ import javax.swing.SwingUtilities;
 public class ViewBook implements ActionListener {
     private final ViewBookView view;
     private List<Book> currentBooks = new ArrayList<>();
+    /** Books currently shown in the table (after filter). Used to get selected book for edit. */
+    private List<Book> displayedBooks = new ArrayList<>();
 
     public ViewBook() {
         view = new ViewBookView();
         view.addRefreshListener(this);
         view.addFilterListener(e -> applyFilter());
+        view.addEditListener(e -> openEditBook());
         loadBooks();
         SwingUtilities.invokeLater(() -> view.show());
+    }
+
+    private void openEditBook() {
+        int idx = view.getSelectedRowIndex();
+        if (idx < 0) {
+            view.showError("Please select a book to edit.");
+            return;
+        }
+        if (idx >= displayedBooks.size()) {
+            return;
+        }
+        Book selected = displayedBooks.get(idx);
+        new EditBook(selected, () -> loadBooks());
     }
 
     @Override
@@ -33,7 +49,8 @@ public class ViewBook implements ActionListener {
     private void applyFilter() {
         String query = view.getSearchText().toLowerCase();
         if (query.isEmpty()) {
-            view.displayBooks(currentBooks);
+            displayedBooks = new ArrayList<>(currentBooks);
+            view.displayBooks(displayedBooks);
             return;
         }
         List<Book> filtered = new ArrayList<>();
@@ -42,7 +59,8 @@ public class ViewBook implements ActionListener {
                 filtered.add(b);
             }
         }
-        view.displayBooks(filtered);
+        displayedBooks = filtered;
+        view.displayBooks(displayedBooks);
     }
 
     private boolean matchesSearch(Book b, String query) {
@@ -53,7 +71,7 @@ public class ViewBook implements ActionListener {
     }
 
     private void loadBooks(){
-    String sql = "SELECT bookName, author, genre, published_year, stock FROM book";
+    String sql = "SELECT book_id, bookName, author, genre, published_year, stock FROM book";
     List<Book> books = new ArrayList<>();
     try {
         Connection conn = DatabaseConnection.getConnection();
@@ -61,6 +79,7 @@ public class ViewBook implements ActionListener {
         ResultSet rs = ps.executeQuery();
         while(rs.next()){
             Book book = new Book();
+            book.setBookId(rs.getInt("book_id"));
             String bookName = rs.getString("bookName");
             String author = rs.getString("author");
             String genre = rs.getString("genre");

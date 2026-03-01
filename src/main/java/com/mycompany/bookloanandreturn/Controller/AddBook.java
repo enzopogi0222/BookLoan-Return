@@ -60,7 +60,7 @@ public class AddBook implements ActionListener {
 
             int rowsInserted = ps.executeUpdate();
             if (rowsInserted > 0) {
-                view.showSuccess("Book Added Successfully");
+                view.showSuccess("Book Added Successfully.");
             } else {
                 view.showError("Failed to add book.");
             }

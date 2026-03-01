@@ -3,6 +3,7 @@ package com.mycompany.bookloanandreturn.Models;
 import com.mycompany.bookloanandreturn.DatabaseConnection;
 
 public class Book {
+   private int bookId;
    private String bookName;
    private String author;
    private String genre;
@@ -72,5 +73,12 @@ public class Book {
     } 
        this.stock = stock;
    }
-           
+
+   public int getBookId() {
+       return bookId;
+   }
+
+   public void setBookId(int bookId) {
+       this.bookId = bookId;
+   }
 }
