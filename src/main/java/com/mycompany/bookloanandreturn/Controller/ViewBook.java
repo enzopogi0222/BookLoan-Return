@@ -34,9 +34,7 @@ public class ViewBook implements ActionListener {
             view.showError("Please select a book to edit.");
             return;
         }
-        if (idx >= displayedBooks.size()) {
-            return;
-        }
+        if (idx >= displayedBooks.size()) return;
         Book selected = displayedBooks.get(idx);
         new EditBook(selected, () -> loadBooks());
     }
@@ -55,9 +53,7 @@ public class ViewBook implements ActionListener {
         }
         List<Book> filtered = new ArrayList<>();
         for (Book b : currentBooks) {
-            if (matchesSearch(b, query)) {
-                filtered.add(b);
-            }
+            if (matchesSearch(b, query)) filtered.add(b);
         }
         displayedBooks = filtered;
         view.displayBooks(displayedBooks);
@@ -70,42 +66,37 @@ public class ViewBook implements ActionListener {
                 || (b.getPublishedYear() != null && b.getPublishedYear().contains(query));
     }
 
-    private void loadBooks(){
-    String sql = "SELECT book_id, bookName, author, genre, published_year, stock FROM book";
-    List<Book> books = new ArrayList<>();
-    try {
-        Connection conn = DatabaseConnection.getConnection();
-        PreparedStatement ps = conn.prepareStatement(sql);
-        ResultSet rs = ps.executeQuery();
-        while(rs.next()){
-            Book book = new Book();
-            book.setBookId(rs.getInt("book_id"));
-            String bookName = rs.getString("bookName");
-            String author = rs.getString("author");
-            String genre = rs.getString("genre");
-            String publishedYear = rs.getString("published_year");
-            int stock = rs.getInt("stock");
-            if (bookName == null || bookName.trim().isEmpty()) bookName = "—";
-            if (author == null || author.trim().isEmpty() || !author.matches("^[a-zA-Z\\s]+$")) author = "Unknown";
-            if (genre == null || genre.trim().isEmpty()) genre = "—";
-            if (publishedYear == null || !publishedYear.matches("\\d+")) publishedYear = "0";
-            if (stock < 0) stock = 0;
-            book.setBookName(bookName);
-            book.setAuthor(author);
-            book.setGenre(genre);
-            book.setPublishedYear(publishedYear);
-            book.setStock(stock == 0 ? 1 : stock);
-            books.add(book);
-        }
-        rs.close();
-        ps.close();
-        conn.close();
-        currentBooks = books;
-        applyFilter();
-
-    } catch (SQLException ex) {
-        view.showError("Database error: " + ex.getMessage());
-        ex.printStackTrace();
+    private void loadBooks() {
+        String sql = "SELECT book_id, bookName, author, genre, published_year, stock FROM book";
+        List<Book> books = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Book book = new Book();
+                book.setBookId(rs.getInt("book_id"));
+                String bookName = rs.getString("bookName");
+                String author = rs.getString("author");
+                String genre = rs.getString("genre");
+                String publishedYear = rs.getString("published_year");
+                int stock = rs.getInt("stock");
+                if (bookName == null || bookName.trim().isEmpty()) bookName = "—";
+                if (author == null || author.trim().isEmpty() || !author.matches("^[a-zA-Z\\s]+$")) author = "Unknown";
+                if (genre == null || genre.trim().isEmpty()) genre = "—";
+                if (publishedYear == null || !publishedYear.matches("\\d+")) publishedYear = "0";
+                if (stock < 0) stock = 0;
+                book.setBookName(bookName);
+                book.setAuthor(author);
+                book.setGenre(genre);
+                book.setPublishedYear(publishedYear);
+                book.setStock(stock == 0 ? 1 : stock);
+                books.add(book);
+            }
+            currentBooks = books;
+            applyFilter();
+        } catch (SQLException ex) {
+            view.showError("Database error: " + ex.getMessage());
+            ex.printStackTrace();
         }
     }
 }
