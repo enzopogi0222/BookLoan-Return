@@ -4,14 +4,11 @@ import com.mycompany.bookloanandreturn.Models.Book;
 import com.mycompany.bookloanandreturn.DatabaseConnection;
 import com.mycompany.bookloanandreturn.View.EditBookView;
 import com.mycompany.bookloanandreturn.util.BookFormHelper;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import javax.swing.SwingUtilities;
 
-public class EditBook implements ActionListener {
+public class EditBook implements Runnable {
     private final EditBookView view;
 
     /** Open edit form with the given book's data pre-filled. */
@@ -28,9 +25,9 @@ public class EditBook implements ActionListener {
         }
         view.addEditBookListener(this);
         if (onReturnMenu != null) {
-            view.setOnWindowClose(() -> SwingUtilities.invokeLater(onReturnMenu));
+            view.setOnWindowClose(onReturnMenu);
         }
-        SwingUtilities.invokeLater(() -> view.show());
+        view.show();
     }
 
     /** Open edit form with no pre-filled data. */
@@ -43,7 +40,7 @@ public class EditBook implements ActionListener {
     }
 
     @Override
-    public void actionPerformed(ActionEvent e) {
+    public void run() {
         Book book = BookFormHelper.fromForm(
                 view.getBookName(), 
                 view.getAuthorName(), 

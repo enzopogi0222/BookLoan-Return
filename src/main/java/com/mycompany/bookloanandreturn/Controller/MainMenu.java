@@ -1,16 +1,20 @@
 package com.mycompany.bookloanandreturn.Controller;
 
 import com.mycompany.bookloanandreturn.View.MainMenuView;
-import javax.swing.SwingUtilities;
+import javafx.stage.Stage;
 
 public class MainMenu {
     private final MainMenuView view;
 
+    public MainMenu(Stage primaryStage) {
+        view = new MainMenuView(primaryStage);
+        view.addAddBookListener(this::openAddBook);
+        view.addViewBookListener(this::openViewBook);
+        view.show();
+    }
+
     public MainMenu() {
-        view = new MainMenuView();
-        view.addAddBookListener(e -> openAddBook());
-        view.addViewBookListener(e -> openViewBook());
-        SwingUtilities.invokeLater(() -> view.show());
+        this(new Stage());
     }
 
     private void openAddBook() {

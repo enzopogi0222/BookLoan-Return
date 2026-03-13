@@ -1,70 +1,57 @@
 package com.mycompany.bookloanandreturn.View;
 
 import com.mycompany.bookloanandreturn.View.common.ViewStyles;
-import java.awt.BorderLayout;
-import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
-import java.awt.event.ActionListener;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.border.EmptyBorder;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.stage.Stage;
 
 /** Main menu view with options for Add Book and View Book. */
 public class MainMenuView {
-    private final JFrame frame;
-    private final JButton addBookButton;
-    private final JButton viewBookButton;
+    private final Stage stage;
+    private final Button addBookButton;
+    private final Button viewBookButton;
 
-    public MainMenuView() {
-        frame = new JFrame("Book Loan and Return - Main Menu");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(520, 360);
-        frame.getContentPane().setBackground(ViewStyles.BACKGROUND);
+    public MainMenuView(Stage stage) {
+        this.stage = stage;
+        this.stage.setTitle("Book Loan and Return - Main Menu");
 
-        Font font = new Font("Segoe UI", Font.PLAIN, 14);
-        JLabel titleLabel = new JLabel("Main Menu");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        titleLabel.setForeground(ViewStyles.LABEL);
+        Font font = Font.font("Segoe UI", 14);
+        Label titleLabel = new Label("Main Menu");
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 22));
+        titleLabel.setStyle(ViewStyles.LABEL_STYLE);
 
-        addBookButton = new JButton("Add Book");
+        addBookButton = new Button("Add Book");
         ViewStyles.styleGreenButton(addBookButton, font);
+        addBookButton.setPrefWidth(160);
 
-        viewBookButton = new JButton("View Book");
+        viewBookButton = new Button("View Book");
         ViewStyles.styleGreenButton(viewBookButton, font);
+        viewBookButton.setPrefWidth(160);
 
-        JPanel centerPanel = new JPanel(new GridBagLayout());
-        centerPanel.setBackground(ViewStyles.BACKGROUND);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 20, 8, 20);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        centerPanel.add(titleLabel, gbc);
-        gbc.gridy = 1;
-        centerPanel.add(addBookButton, gbc);
-        gbc.gridy = 2;
-        centerPanel.add(viewBookButton, gbc);
+        VBox centerPanel = new VBox(12, titleLabel, addBookButton, viewBookButton);
+        centerPanel.setAlignment(Pos.CENTER);
+        centerPanel.setPadding(new Insets(30, 40, 30, 40));
+        centerPanel.setStyle(ViewStyles.BACKGROUND_STYLE);
 
-        JPanel mainPanel = new JPanel(new BorderLayout(10, 20));
-        mainPanel.setBackground(ViewStyles.BACKGROUND);
-        mainPanel.setBorder(new EmptyBorder(30, 40, 30, 40));
-        mainPanel.add(centerPanel, BorderLayout.CENTER);
-
-        frame.add(mainPanel);
-        frame.setLocationRelativeTo(null);
+        Scene scene = new Scene(centerPanel, 520, 360);
+        this.stage.setScene(scene);
     }
 
-    public void addAddBookListener(ActionListener listener) {
-        addBookButton.addActionListener(listener);
+    public void addAddBookListener(Runnable listener) {
+        addBookButton.setOnAction(e -> listener.run());
     }
-    public void addViewBookListener(ActionListener listener) {
-        viewBookButton.addActionListener(listener);
+
+    public void addViewBookListener(Runnable listener) {
+        viewBookButton.setOnAction(e -> listener.run());
     }
-    public void show() { frame.setVisible(true); }
-    public void hide() { frame.setVisible(false); }
-    public JFrame getFrame() { return frame; }
+
+    public void show() { stage.show(); }
+    public void hide() { stage.hide(); }
+    public Stage getStage() { return stage; }
 }

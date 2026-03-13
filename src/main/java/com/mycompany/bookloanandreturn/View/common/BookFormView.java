@@ -1,83 +1,79 @@
 package com.mycompany.bookloanandreturn.View.common;
 
-import java.awt.Color;
-import java.awt.GridLayout;
-import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JTextField;
+import javafx.geometry.Insets;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
 /** Base for Add/Edit Book views: same form layout, colors, and window-close behavior. */
 public abstract class BookFormView {
-    protected final JFrame frame;
-    protected final JTextField bookNameField;
-    protected final JTextField authorField;
-    protected final JTextField genreField;
-    protected final JTextField publishedYearField;
-    protected final JTextField stockField;
-    protected final JTextField[] allFields;
-    private ActionListener saveListener;
+    protected final Stage stage;
+    protected final TextField bookNameField;
+    protected final TextField authorField;
+    protected final TextField genreField;
+    protected final TextField publishedYearField;
+    protected final TextField stockField;
+    protected final TextField[] allFields;
+    private Runnable saveListener;
 
     public BookFormView(String title, String buttonText) {
-        frame = new JFrame(title);
-        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setSize(520, 420);
-        frame.getContentPane().setBackground(ViewStyles.BACKGROUND);
+        stage = new Stage();
+        stage.setTitle(title);
 
-        JPanel panel = new JPanel(new GridLayout(6, 2, 5, 10));
-        panel.setBackground(ViewStyles.BACKGROUND);
-        panel.setOpaque(true);
+        GridPane panel = new GridPane();
+        panel.setHgap(10);
+        panel.setVgap(10);
+        panel.setPadding(new Insets(20));
+        panel.setStyle(ViewStyles.BACKGROUND_STYLE);
 
-        bookNameField = new JTextField(20);
-        authorField = new JTextField(20);
-        genreField = new JTextField(20);
-        publishedYearField = new JTextField(20);
-        stockField = new JTextField(20);
-        allFields = new JTextField[]{bookNameField, authorField, genreField, publishedYearField, stockField};
+        bookNameField = new TextField();
+        authorField = new TextField();
+        genreField = new TextField();
+        publishedYearField = new TextField();
+        stockField = new TextField();
+        allFields = new TextField[]{bookNameField, authorField, genreField, publishedYearField, stockField};
 
-        addRow(panel, "Book Name:", bookNameField);
-        addRow(panel, "Author:", authorField);
-        addRow(panel, "Genre:", genreField);
-        addRow(panel, "Published Year:", publishedYearField);
-        addRow(panel, "Stock:", stockField);
+        addRow(panel, 0, "Book Name:", bookNameField);
+        addRow(panel, 1, "Author:", authorField);
+        addRow(panel, 2, "Genre:", genreField);
+        addRow(panel, 3, "Published Year:", publishedYearField);
+        addRow(panel, 4, "Stock:", stockField);
 
-        JButton btn = new JButton(buttonText);
-        ViewStyles.styleGreenButton(btn);
-        panel.add(new JLabel(""));
-        panel.add(btn);
-        btn.addActionListener(e -> {
-            if (saveListener != null) saveListener.actionPerformed(null);
+        Button saveButton = new Button(buttonText);
+        ViewStyles.styleGreenButton(saveButton);
+        saveButton.setOnAction(e -> {
+            if (saveListener != null) {
+                saveListener.run();
+            }
         });
+        panel.add(saveButton, 1, 5);
 
-        frame.add(panel);
-        frame.setLocationRelativeTo(null);
+        VBox root = new VBox(panel);
+        root.setStyle(ViewStyles.BACKGROUND_STYLE);
+
+        Scene scene = new Scene(root, 520, 420);
+        stage.setScene(scene);
     }
 
-    private static void addRow(JPanel panel, String labelText, JTextField field) {
-        JLabel label = new JLabel(labelText);
-        label.setForeground(ViewStyles.LABEL);
-        field.setBackground(Color.WHITE);
-        panel.add(label);
-        panel.add(field);
+    private static void addRow(GridPane panel, int row, String labelText, TextField field) {
+        Label label = new Label(labelText);
+        label.setStyle(ViewStyles.LABEL_STYLE);
+        panel.add(label, 0, row);
+        panel.add(field, 1, row);
     }
 
-    protected void addSaveListener(ActionListener listener) {
+    protected void addSaveListener(Runnable listener) {
         this.saveListener = listener;
     }
 
     public void setOnWindowClose(Runnable onClose) {
         if (onClose != null) {
-            frame.addWindowListener(new WindowAdapter() {
-                @Override
-                public void windowClosed(WindowEvent e) {
-                    onClose.run();
-                }
-            });
+            stage.setOnHidden(event -> onClose.run());
         }
     }
 
@@ -86,14 +82,20 @@ public abstract class BookFormView {
     public String getGenre() { return genreField.getText().trim(); }
     public String getPublishedYear() { return publishedYearField.getText().trim(); }
     public String getStockText() { return stockField.getText().trim(); }
-    public JFrame getFrame() { return frame; }
-    public void show() { frame.setVisible(true); }
+    public Stage getStage() { return stage; }
+    public void show() { stage.show(); }
 
     public void showError(String message) {
-        JOptionPane.showMessageDialog(frame, message, "Error", JOptionPane.ERROR_MESSAGE);
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Error");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
     public void clearFields() {
-        for (JTextField f : allFields) f.setText("");
+        for (TextField f : allFields) {
+            f.setText("");
+        }
     }
 }

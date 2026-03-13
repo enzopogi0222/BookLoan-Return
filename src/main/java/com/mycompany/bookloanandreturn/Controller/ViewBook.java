@@ -3,17 +3,14 @@ package com.mycompany.bookloanandreturn.Controller;
 import com.mycompany.bookloanandreturn.Models.Book;
 import com.mycompany.bookloanandreturn.DatabaseConnection;
 import com.mycompany.bookloanandreturn.View.ViewBookView;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.SwingUtilities;
 
-public class ViewBook implements ActionListener {
+public class ViewBook implements Runnable {
     private final ViewBookView view;
     private List<Book> currentBooks = new ArrayList<>();
     /** Books currently shown in the table (after filter). Used to get selected book for edit. */
@@ -22,10 +19,10 @@ public class ViewBook implements ActionListener {
     public ViewBook() {
         view = new ViewBookView();
         view.addRefreshListener(this);
-        view.addFilterListener(e -> applyFilter());
-        view.addEditListener(e -> openEditBook());
+        view.addFilterListener(this::applyFilter);
+        view.addEditListener(this::openEditBook);
         loadBooks();
-        SwingUtilities.invokeLater(() -> view.show());
+        view.show();
     }
 
     private void openEditBook() {
@@ -40,7 +37,7 @@ public class ViewBook implements ActionListener {
     }
 
     @Override
-    public void actionPerformed(ActionEvent e) {
+    public void run() {
         loadBooks();
     }
 

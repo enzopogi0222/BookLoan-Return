@@ -1,27 +1,24 @@
 package com.mycompany.bookloanandreturn.View.common;
 
-import java.awt.Color;
-import java.awt.Font;
-import javax.swing.JButton;
+import javafx.scene.control.Button;
+import javafx.scene.text.Font;
 
 /** Shared colors and button styling for views. */
 public final class ViewStyles {
-    public static final Color BACKGROUND = new Color(200, 230, 201);
-    public static final Color LABEL = new Color(27, 94, 32);
-    public static final Color BUTTON_GREEN = new Color(46, 125, 50);
+    public static final String BACKGROUND_STYLE = "-fx-background-color: #c8e6c9;";
+    public static final String LABEL_STYLE = "-fx-text-fill: #1b5e20;";
+    public static final String GREEN_BUTTON_STYLE = "-fx-background-color: #2e7d32; -fx-text-fill: white;";
 
     private ViewStyles() {}
 
-    public static void styleGreenButton(JButton b) {
-        b.setBackground(BUTTON_GREEN);
-        b.setForeground(Color.WHITE);
-        b.setOpaque(true);
-        b.setBorderPainted(true);
+    public static void styleGreenButton(Button button) {
+        button.setStyle(GREEN_BUTTON_STYLE);
     }
 
-    public static void styleGreenButton(JButton b, Font font) {
-        styleGreenButton(b);
-        if (font != null) b.setFont(font);
-        b.setFocusPainted(false);
+    public static void styleGreenButton(Button button, Font font) {
+        styleGreenButton(button);
+        if (font != null) {
+            button.setFont(font);
+        }
     }
 }

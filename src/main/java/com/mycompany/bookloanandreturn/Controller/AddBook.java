@@ -4,15 +4,12 @@ import com.mycompany.bookloanandreturn.Models.Book;
 import com.mycompany.bookloanandreturn.DatabaseConnection;
 import com.mycompany.bookloanandreturn.View.AddBookView;
 import com.mycompany.bookloanandreturn.util.BookFormHelper;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import javax.swing.SwingUtilities;
 
 /** Controller for Add Book. Coordinates the view and database. */
-public class AddBook implements ActionListener {
+public class AddBook implements Runnable {
     private final AddBookView view;
 
     /** Opens Add Book; when the window is closed, onReturnToMenu is run (e.g. show main menu). */
@@ -20,9 +17,9 @@ public class AddBook implements ActionListener {
         view = new AddBookView();
         view.addAddBookListener(this);
         if (onReturnToMenu != null) {
-            view.setOnWindowClose(() -> SwingUtilities.invokeLater(onReturnToMenu));
+            view.setOnWindowClose(onReturnToMenu);
         }
-        SwingUtilities.invokeLater(() -> view.show());
+        view.show();
     }
 
     /** Opens Add Book with no "return" callback (e.g. when not launched from main menu). */
@@ -31,7 +28,7 @@ public class AddBook implements ActionListener {
     }
 
     @Override
-    public void actionPerformed(ActionEvent e) {
+    public void run() {
         Book book = BookFormHelper.fromForm(
                 view.getBookName(), 
                 view.getAuthor(), 

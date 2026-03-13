@@ -1,8 +1,7 @@
 package com.mycompany.bookloanandreturn.View;
 
 import com.mycompany.bookloanandreturn.View.common.BookFormView;
-import java.awt.event.ActionListener;
-import javax.swing.JOptionPane;
+import javafx.scene.control.Alert;
 
 /** View for the Edit Book screen. Displays form fields and notifies listeners on save. */
 public class EditBookView extends BookFormView {
@@ -12,7 +11,7 @@ public class EditBookView extends BookFormView {
         super("Edit Book", "Update Book");
     }
 
-    public void addEditBookListener(ActionListener listener) {
+    public void addEditBookListener(Runnable listener) {
         addSaveListener(listener);
     }
 
@@ -35,6 +34,10 @@ public class EditBookView extends BookFormView {
 
     /** Show success message (matches controller spelling). */
     public void showSucess(String message) {
-        JOptionPane.showMessageDialog(frame, message);
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Success");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 }
