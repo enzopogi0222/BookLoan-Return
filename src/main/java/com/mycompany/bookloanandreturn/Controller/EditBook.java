@@ -7,13 +7,14 @@ import com.mycompany.bookloanandreturn.util.BookFormHelper;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import javafx.stage.Stage;
 
 public class EditBook implements Runnable {
     private final EditBookView view;
 
     /** Open edit form with the given book's data pre-filled. */
-    public EditBook(Book toEdit, Runnable onReturnMenu) {
-        view = new EditBookView();
+    public EditBook(Stage stage, Book toEdit, Runnable onReturnMenu) {
+        view = new EditBookView(stage);
         if (toEdit != null) {
             view.setBookId(toEdit.getBookId());
             view.setBook(
@@ -25,18 +26,9 @@ public class EditBook implements Runnable {
         }
         view.addEditBookListener(this);
         if (onReturnMenu != null) {
-            view.setOnWindowClose(onReturnMenu);
+            view.addBackListener(onReturnMenu);
         }
         view.show();
-    }
-
-    /** Open edit form with no pre-filled data. */
-    public EditBook(Runnable onReturnMenu) {
-        this(null, onReturnMenu);
-    }
-
-    public EditBook() {
-        this(null, null);
     }
 
     @Override
@@ -70,7 +62,6 @@ public class EditBook implements Runnable {
             else view.showError("Failed to update book.");
         } catch (SQLException ex) {
             view.showError("Database error: " + ex.getMessage());
-            ex.printStackTrace();
         }
     }
 }

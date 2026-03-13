@@ -9,18 +9,22 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import javafx.stage.Stage;
 
 public class ViewBook implements Runnable {
     private final ViewBookView view;
+    private final Runnable onReturnMenu;
     private List<Book> currentBooks = new ArrayList<>();
     /** Books currently shown in the table (after filter). Used to get selected book for edit. */
     private List<Book> displayedBooks = new ArrayList<>();
 
-    public ViewBook() {
-        view = new ViewBookView();
+    public ViewBook(Stage stage, Runnable onReturnMenu) {
+        view = new ViewBookView(stage);
+        this.onReturnMenu = onReturnMenu;
         view.addRefreshListener(this);
         view.addFilterListener(this::applyFilter);
         view.addEditListener(this::openEditBook);
+        view.addBackListener(this::goBack);
         loadBooks();
         view.show();
     }
@@ -33,7 +37,13 @@ public class ViewBook implements Runnable {
         }
         if (idx >= displayedBooks.size()) return;
         Book selected = displayedBooks.get(idx);
-        new EditBook(selected, () -> loadBooks());
+        new EditBook(view.getStage(), selected, () -> loadBooks());
+    }
+
+    private void goBack() {
+        if (onReturnMenu != null) {
+            onReturnMenu.run();
+        }
     }
 
     @Override
@@ -93,7 +103,6 @@ public class ViewBook implements Runnable {
             applyFilter();
         } catch (SQLException ex) {
             view.showError("Database error: " + ex.getMessage());
-            ex.printStackTrace();
         }
     }
 }

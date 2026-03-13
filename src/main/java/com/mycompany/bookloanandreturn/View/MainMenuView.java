@@ -6,40 +6,50 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 
 /** Main menu view with options for Add Book and View Book. */
 public class MainMenuView {
     private final Stage stage;
+    private final Scene scene;
     private final Button addBookButton;
     private final Button viewBookButton;
 
     public MainMenuView(Stage stage) {
         this.stage = stage;
         this.stage.setTitle("Book Loan and Return - Main Menu");
+        this.stage.setMinWidth(ViewStyles.SCENE_WIDTH);
+        this.stage.setMinHeight(ViewStyles.SCENE_HEIGHT);
+        this.stage.setResizable(true);
 
         Font font = Font.font("Segoe UI", 14);
         Label titleLabel = new Label("Main Menu");
-        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 22));
-        titleLabel.setStyle(ViewStyles.LABEL_STYLE);
+        titleLabel.setStyle(ViewStyles.TITLE_STYLE);
+
+        Label subtitleLabel = new Label("Manage books quickly and clearly");
+        subtitleLabel.setStyle(ViewStyles.SUBTITLE_STYLE);
 
         addBookButton = new Button("Add Book");
         ViewStyles.styleGreenButton(addBookButton, font);
-        addBookButton.setPrefWidth(160);
+        addBookButton.setPrefWidth(220);
 
         viewBookButton = new Button("View Book");
         ViewStyles.styleGreenButton(viewBookButton, font);
-        viewBookButton.setPrefWidth(160);
+        viewBookButton.setPrefWidth(220);
 
-        VBox centerPanel = new VBox(12, titleLabel, addBookButton, viewBookButton);
+        VBox centerPanel = new VBox(14, titleLabel, subtitleLabel, addBookButton, viewBookButton);
         centerPanel.setAlignment(Pos.CENTER);
-        centerPanel.setPadding(new Insets(30, 40, 30, 40));
-        centerPanel.setStyle(ViewStyles.BACKGROUND_STYLE);
+        centerPanel.setPadding(new Insets(28, 36, 28, 36));
+        ViewStyles.styleCard(centerPanel);
 
-        Scene scene = new Scene(centerPanel, 520, 360);
+        StackPane root = new StackPane(centerPanel);
+        root.setPadding(new Insets(24));
+        root.setStyle(ViewStyles.BACKGROUND_STYLE);
+
+        scene = new Scene(root, ViewStyles.SCENE_WIDTH, ViewStyles.SCENE_HEIGHT);
         this.stage.setScene(scene);
     }
 
@@ -51,7 +61,9 @@ public class MainMenuView {
         viewBookButton.setOnAction(e -> listener.run());
     }
 
-    public void show() { stage.show(); }
-    public void hide() { stage.hide(); }
+    public void show() {
+        ViewStyles.showScenePreservingState(stage, scene);
+    }
+
     public Stage getStage() { return stage; }
 }

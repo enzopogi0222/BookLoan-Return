@@ -7,24 +7,20 @@ import com.mycompany.bookloanandreturn.util.BookFormHelper;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import javafx.stage.Stage;
 
 /** Controller for Add Book. Coordinates the view and database. */
 public class AddBook implements Runnable {
     private final AddBookView view;
 
-    /** Opens Add Book; when the window is closed, onReturnToMenu is run (e.g. show main menu). */
-    public AddBook(Runnable onReturnToMenu) {
-        view = new AddBookView();
+    /** Opens Add Book. */
+    public AddBook(Stage stage, Runnable onReturnToMenu) {
+        view = new AddBookView(stage);
         view.addAddBookListener(this);
         if (onReturnToMenu != null) {
-            view.setOnWindowClose(onReturnToMenu);
+            view.addBackListener(onReturnToMenu);
         }
         view.show();
-    }
-
-    /** Opens Add Book with no "return" callback (e.g. when not launched from main menu). */
-    public AddBook() {
-        this(null);
     }
 
     @Override
@@ -51,7 +47,6 @@ public class AddBook implements Runnable {
             else view.showError("Failed to add book.");
         } catch (SQLException ex) {
             view.showError("Database error: " + ex.getMessage());
-            ex.printStackTrace();
         }
     }
 }

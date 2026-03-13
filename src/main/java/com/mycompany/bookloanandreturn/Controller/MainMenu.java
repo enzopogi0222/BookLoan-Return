@@ -18,11 +18,10 @@ public class MainMenu {
     }
 
     private void openAddBook() {
-        view.hide();
-        new AddBook(() -> view.show());
+        new AddBook(view.getStage(), view::show);
     }
 
     private void openViewBook() {
-        new ViewBook();
+        new ViewBook(view.getStage(), view::show);
     }
 }
