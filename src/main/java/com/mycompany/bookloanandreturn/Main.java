@@ -2,11 +2,11 @@
 
 package com.mycompany.bookloanandreturn;
 
-import com.mycompany.bookloanandreturn.Controller.MainMenu;
+import javafx.application.Application;
 
 public class Main {
 
     public static void main(String[] args) {
-        new MainMenu();
+        Application.launch(JavaFxApp.class, args);
     }
 }

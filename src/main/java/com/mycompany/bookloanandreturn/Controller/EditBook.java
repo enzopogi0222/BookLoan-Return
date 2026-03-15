@@ -4,19 +4,17 @@ import com.mycompany.bookloanandreturn.Models.Book;
 import com.mycompany.bookloanandreturn.DatabaseConnection;
 import com.mycompany.bookloanandreturn.View.EditBookView;
 import com.mycompany.bookloanandreturn.util.BookFormHelper;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import javax.swing.SwingUtilities;
+import javafx.stage.Stage;
 
-public class EditBook implements ActionListener {
+public class EditBook implements Runnable {
     private final EditBookView view;
 
     /** Open edit form with the given book's data pre-filled. */
-    public EditBook(Book toEdit, Runnable onReturnMenu) {
-        view = new EditBookView();
+    public EditBook(Stage stage, Book toEdit, Runnable onReturnMenu) {
+        view = new EditBookView(stage);
         if (toEdit != null) {
             view.setBookId(toEdit.getBookId());
             view.setBook(
@@ -28,22 +26,13 @@ public class EditBook implements ActionListener {
         }
         view.addEditBookListener(this);
         if (onReturnMenu != null) {
-            view.setOnWindowClose(() -> SwingUtilities.invokeLater(onReturnMenu));
+            view.addBackListener(onReturnMenu);
         }
-        SwingUtilities.invokeLater(() -> view.show());
-    }
-
-    /** Open edit form with no pre-filled data. */
-    public EditBook(Runnable onReturnMenu) {
-        this(null, onReturnMenu);
-    }
-
-    public EditBook() {
-        this(null, null);
+        view.show();
     }
 
     @Override
-    public void actionPerformed(ActionEvent e) {
+    public void run() {
         Book book = BookFormHelper.fromForm(
                 view.getBookName(), 
                 view.getAuthorName(), 
@@ -73,7 +62,6 @@ public class EditBook implements ActionListener {
             else view.showError("Failed to update book.");
         } catch (SQLException ex) {
             view.showError("Database error: " + ex.getMessage());
-            ex.printStackTrace();
         }
     }
 }

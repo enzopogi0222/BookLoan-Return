@@ -1,84 +1,117 @@
 package com.mycompany.bookloanandreturn.View.common;
 
-import java.awt.Color;
-import java.awt.GridLayout;
-import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JTextField;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
 /** Base for Add/Edit Book views: same form layout, colors, and window-close behavior. */
 public abstract class BookFormView {
-    protected final JFrame frame;
-    protected final JTextField bookNameField;
-    protected final JTextField authorField;
-    protected final JTextField genreField;
-    protected final JTextField publishedYearField;
-    protected final JTextField stockField;
-    protected final JTextField[] allFields;
-    private ActionListener saveListener;
+    protected final Stage stage;
+    private final Scene scene;
+    protected final TextField bookNameField;
+    protected final TextField authorField;
+    protected final TextField genreField;
+    protected final TextField publishedYearField;
+    protected final TextField stockField;
+    protected final TextField[] allFields;
+    private Runnable saveListener;
+    private Runnable backListener;
 
-    public BookFormView(String title, String buttonText) {
-        frame = new JFrame(title);
-        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setSize(520, 420);
-        frame.getContentPane().setBackground(ViewStyles.BACKGROUND);
+    public BookFormView(Stage stage, String title, String buttonText) {
+        this.stage = stage;
+        stage.setTitle(title);
+        stage.setMinWidth(ViewStyles.SCENE_WIDTH);
+        stage.setMinHeight(ViewStyles.SCENE_HEIGHT);
+        stage.setResizable(true);
 
-        JPanel panel = new JPanel(new GridLayout(6, 2, 5, 10));
-        panel.setBackground(ViewStyles.BACKGROUND);
-        panel.setOpaque(true);
+        Label titleLabel = new Label(title);
+        titleLabel.setStyle(ViewStyles.TITLE_STYLE);
 
-        bookNameField = new JTextField(20);
-        authorField = new JTextField(20);
-        genreField = new JTextField(20);
-        publishedYearField = new JTextField(20);
-        stockField = new JTextField(20);
-        allFields = new JTextField[]{bookNameField, authorField, genreField, publishedYearField, stockField};
+        GridPane panel = new GridPane();
+        panel.setHgap(14);
+        panel.setVgap(12);
 
-        addRow(panel, "Book Name:", bookNameField);
-        addRow(panel, "Author:", authorField);
-        addRow(panel, "Genre:", genreField);
-        addRow(panel, "Published Year:", publishedYearField);
-        addRow(panel, "Stock:", stockField);
+        bookNameField = new TextField();
+        authorField = new TextField();
+        genreField = new TextField();
+        publishedYearField = new TextField();
+        stockField = new TextField();
 
-        JButton btn = new JButton(buttonText);
-        ViewStyles.styleGreenButton(btn);
-        panel.add(new JLabel(""));
-        panel.add(btn);
-        btn.addActionListener(e -> {
-            if (saveListener != null) saveListener.actionPerformed(null);
+        bookNameField.setPromptText("Enter book name");
+        authorField.setPromptText("Enter author");
+        genreField.setPromptText("Enter genre");
+        publishedYearField.setPromptText("e.g. 2024");
+        stockField.setPromptText("e.g. 5");
+
+        ViewStyles.styleInput(bookNameField);
+        ViewStyles.styleInput(authorField);
+        ViewStyles.styleInput(genreField);
+        ViewStyles.styleInput(publishedYearField);
+        ViewStyles.styleInput(stockField);
+
+        allFields = new TextField[]{bookNameField, authorField, genreField, publishedYearField, stockField};
+
+        addRow(panel, 0, "Book Name:", bookNameField);
+        addRow(panel, 1, "Author:", authorField);
+        addRow(panel, 2, "Genre:", genreField);
+        addRow(panel, 3, "Published Year:", publishedYearField);
+        addRow(panel, 4, "Stock:", stockField);
+
+        Button saveButton = new Button(buttonText);
+        ViewStyles.styleGreenButton(saveButton);
+        saveButton.setPrefWidth(150);
+        saveButton.setOnAction(e -> {
+            if (saveListener != null) {
+                saveListener.run();
+            }
         });
 
-        frame.add(panel);
-        frame.setLocationRelativeTo(null);
+        Button backButton = new Button("Back");
+        ViewStyles.styleGreenButton(backButton);
+        backButton.setPrefWidth(120);
+        backButton.setOnAction(e -> {
+            if (backListener != null) {
+                backListener.run();
+            }
+        });
+
+        HBox actions = new HBox(10, backButton, saveButton);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+        panel.add(actions, 1, 5);
+
+        VBox card = new VBox(18, titleLabel, panel);
+        card.setPadding(new Insets(24));
+        ViewStyles.styleCard(card);
+
+        StackPane root = new StackPane(card);
+        root.setPadding(new Insets(24));
+        root.setStyle(ViewStyles.BACKGROUND_STYLE);
+
+        scene = new Scene(root, ViewStyles.SCENE_WIDTH, ViewStyles.SCENE_HEIGHT);
+        stage.setScene(scene);
     }
 
-    private static void addRow(JPanel panel, String labelText, JTextField field) {
-        JLabel label = new JLabel(labelText);
-        label.setForeground(ViewStyles.LABEL);
-        field.setBackground(Color.WHITE);
-        panel.add(label);
-        panel.add(field);
+    private static void addRow(GridPane panel, int row, String labelText, TextField field) {
+        Label label = new Label(labelText);
+        label.setStyle(ViewStyles.LABEL_STYLE);
+        panel.add(label, 0, row);
+        panel.add(field, 1, row);
     }
 
-    protected void addSaveListener(ActionListener listener) {
+    protected void addSaveListener(Runnable listener) {
         this.saveListener = listener;
     }
 
-    public void setOnWindowClose(Runnable onClose) {
-        if (onClose != null) {
-            frame.addWindowListener(new WindowAdapter() {
-                @Override
-                public void windowClosed(WindowEvent e) {
-                    onClose.run();
-                }
-            });
-        }
+    protected void addBackListener(Runnable listener) {
+        this.backListener = listener;
     }
 
     public String getBookName() { return bookNameField.getText().trim(); }
@@ -86,14 +119,18 @@ public abstract class BookFormView {
     public String getGenre() { return genreField.getText().trim(); }
     public String getPublishedYear() { return publishedYearField.getText().trim(); }
     public String getStockText() { return stockField.getText().trim(); }
-    public JFrame getFrame() { return frame; }
-    public void show() { frame.setVisible(true); }
+    public Stage getStage() { return stage; }
+    public void show() {
+        ViewStyles.showScenePreservingState(stage, scene);
+    }
 
     public void showError(String message) {
-        JOptionPane.showMessageDialog(frame, message, "Error", JOptionPane.ERROR_MESSAGE);
+        ViewStyles.showErrorAlert(message);
     }
 
     public void clearFields() {
-        for (JTextField f : allFields) f.setText("");
+        for (TextField f : allFields) {
+            f.setText("");
+        }
     }
 }

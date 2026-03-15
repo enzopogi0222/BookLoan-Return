@@ -3,29 +3,30 @@ package com.mycompany.bookloanandreturn.Controller;
 import com.mycompany.bookloanandreturn.Models.Book;
 import com.mycompany.bookloanandreturn.DatabaseConnection;
 import com.mycompany.bookloanandreturn.View.ViewBookView;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.SwingUtilities;
+import javafx.stage.Stage;
 
-public class ViewBook implements ActionListener {
+public class ViewBook implements Runnable {
     private final ViewBookView view;
+    private final Runnable onReturnMenu;
     private List<Book> currentBooks = new ArrayList<>();
     /** Books currently shown in the table (after filter). Used to get selected book for edit. */
     private List<Book> displayedBooks = new ArrayList<>();
 
-    public ViewBook() {
-        view = new ViewBookView();
+    public ViewBook(Stage stage, Runnable onReturnMenu) {
+        view = new ViewBookView(stage);
+        this.onReturnMenu = onReturnMenu;
         view.addRefreshListener(this);
-        view.addFilterListener(e -> applyFilter());
-        view.addEditListener(e -> openEditBook());
+        view.addFilterListener(this::applyFilter);
+        view.addEditListener(this::openEditBook);
+        view.addBackListener(this::goBack);
         loadBooks();
-        SwingUtilities.invokeLater(() -> view.show());
+        view.show();
     }
 
     private void openEditBook() {
@@ -36,11 +37,17 @@ public class ViewBook implements ActionListener {
         }
         if (idx >= displayedBooks.size()) return;
         Book selected = displayedBooks.get(idx);
-        new EditBook(selected, () -> loadBooks());
+        new EditBook(view.getStage(), selected, () -> loadBooks());
+    }
+
+    private void goBack() {
+        if (onReturnMenu != null) {
+            onReturnMenu.run();
+        }
     }
 
     @Override
-    public void actionPerformed(ActionEvent e) {
+    public void run() {
         loadBooks();
     }
 
@@ -96,7 +103,6 @@ public class ViewBook implements ActionListener {
             applyFilter();
         } catch (SQLException ex) {
             view.showError("Database error: " + ex.getMessage());
-            ex.printStackTrace();
         }
     }
 }

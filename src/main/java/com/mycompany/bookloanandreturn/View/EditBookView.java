@@ -1,19 +1,23 @@
 package com.mycompany.bookloanandreturn.View;
 
 import com.mycompany.bookloanandreturn.View.common.BookFormView;
-import java.awt.event.ActionListener;
-import javax.swing.JOptionPane;
+import com.mycompany.bookloanandreturn.View.common.ViewStyles;
+import javafx.stage.Stage;
 
 /** View for the Edit Book screen. Displays form fields and notifies listeners on save. */
 public class EditBookView extends BookFormView {
     private int currentBookId;
 
-    public EditBookView() {
-        super("Edit Book", "Update Book");
+    public EditBookView(Stage stage) {
+        super(stage, "Edit Book", "Update Book");
     }
 
-    public void addEditBookListener(ActionListener listener) {
+    public void addEditBookListener(Runnable listener) {
         addSaveListener(listener);
+    }
+
+    public void addBackListener(Runnable listener) {
+        super.addBackListener(listener);
     }
 
     /** Author field value (controller uses getAuthorName). */
@@ -35,6 +39,6 @@ public class EditBookView extends BookFormView {
 
     /** Show success message (matches controller spelling). */
     public void showSucess(String message) {
-        JOptionPane.showMessageDialog(frame, message);
+        ViewStyles.showInfoAlert("Success", message);
     }
 }
