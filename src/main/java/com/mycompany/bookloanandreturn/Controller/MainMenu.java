@@ -13,10 +13,6 @@ public class MainMenu {
         view.show();
     }
 
-    public MainMenu() {
-        this(new Stage());
-    }
-
     private void openAddBook() {
         new AddBook(view.getStage(), view::show);
     }

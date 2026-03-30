@@ -7,11 +7,17 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.stage.Stage;
 
 public class ViewBook implements Runnable {
+    private static final int MAX_BOOK_NAME_LENGTH = 120;
+    private static final int MAX_AUTHOR_LENGTH = 80;
+    private static final int MAX_GENRE_LENGTH = 60;
+    private static final int MIN_PUBLISHED_YEAR = 1450;
+
     private final ViewBookView view;
     private final Runnable onReturnMenu;
     private List<Book> currentBooks = new ArrayList<>();
@@ -82,21 +88,17 @@ public class ViewBook implements Runnable {
             while (rs.next()) {
                 Book book = new Book();
                 book.setBookId(rs.getInt("book_id"));
-                String bookName = rs.getString("bookName");
-                String author = rs.getString("author");
-                String genre = rs.getString("genre");
-                String publishedYear = rs.getString("published_year");
-                int stock = rs.getInt("stock");
-                if (bookName == null || bookName.trim().isEmpty()) bookName = "—";
-                if (author == null || author.trim().isEmpty() || !author.matches("^[a-zA-Z\\s]+$")) author = "Unknown";
-                if (genre == null || genre.trim().isEmpty()) genre = "—";
-                if (publishedYear == null || !publishedYear.matches("\\d+")) publishedYear = "0";
-                if (stock < 0) stock = 0;
+                String bookName = sanitizeBookName(rs.getString("bookName"));
+                String author = sanitizeAuthor(rs.getString("author"));
+                String genre = sanitizeGenre(rs.getString("genre"));
+                String publishedYear = sanitizePublishedYear(rs.getString("published_year"));
+                int stock = sanitizeStock(rs.getInt("stock"));
+
                 book.setBookName(bookName);
                 book.setAuthor(author);
                 book.setGenre(genre);
                 book.setPublishedYear(publishedYear);
-                book.setStock(stock == 0 ? 1 : stock);
+                book.setStock(stock);
                 books.add(book);
             }
             currentBooks = books;
@@ -104,5 +106,60 @@ public class ViewBook implements Runnable {
         } catch (SQLException ex) {
             view.showError("Database error: " + ex.getMessage());
         }
+    }
+
+    private static String sanitizeBookName(String value) {
+        String cleaned = cleanText(value);
+        if (cleaned.isEmpty()) {
+            return "Untitled";
+        }
+        return truncate(cleaned, MAX_BOOK_NAME_LENGTH);
+    }
+
+    private static String sanitizeAuthor(String value) {
+        String cleaned = cleanText(value);
+        if (cleaned.isEmpty()) {
+            return "Unknown";
+        }
+        cleaned = truncate(cleaned, MAX_AUTHOR_LENGTH);
+        if (!cleaned.matches("^[a-zA-Z][a-zA-Z .'-]*$")) {
+            return "Unknown";
+        }
+        return cleaned;
+    }
+
+    private static String sanitizeGenre(String value) {
+        String cleaned = cleanText(value);
+        if (cleaned.isEmpty()) {
+            return "General";
+        }
+        return truncate(cleaned, MAX_GENRE_LENGTH);
+    }
+
+    private static String sanitizePublishedYear(String value) {
+        int currentYear = Year.now().getValue();
+        if (value == null || !value.trim().matches("\\d+")) {
+            return String.valueOf(currentYear);
+        }
+        int year = Integer.parseInt(value.trim());
+        if (year < MIN_PUBLISHED_YEAR || year > currentYear) {
+            return String.valueOf(currentYear);
+        }
+        return String.valueOf(year);
+    }
+
+    private static int sanitizeStock(int stock) {
+        return stock <= 0 ? 1 : stock;
+    }
+
+    private static String cleanText(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.trim().replaceAll("\\s+", " ");
+    }
+
+    private static String truncate(String value, int maxLength) {
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
     }
 }

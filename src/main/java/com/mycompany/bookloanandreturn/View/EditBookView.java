@@ -20,11 +20,6 @@ public class EditBookView extends BookFormView {
         super.addBackListener(listener);
     }
 
-    /** Author field value (controller uses getAuthorName). */
-    public String getAuthorName() {
-        return getAuthor();
-    }
-
     public void setBookId(int id) { this.currentBookId = id; }
     public int getBookId() { return currentBookId; }
 
@@ -33,12 +28,11 @@ public class EditBookView extends BookFormView {
         bookNameField.setText(bookName != null ? bookName : "");
         authorField.setText(author != null ? author : "");
         genreField.setText(genre != null ? genre : "");
-        publishedYearField.setText(publishedYear != null ? publishedYear : "");
+        setPublishedYear(publishedYear);
         stockField.setText(String.valueOf(stock));
     }
 
-    /** Show success message (matches controller spelling). */
-    public void showSucess(String message) {
+    public void showSuccess(String message) {
         ViewStyles.showInfoAlert("Success", message);
     }
 }

@@ -35,7 +35,7 @@ public class EditBook implements Runnable {
     public void run() {
         Book book = BookFormHelper.fromForm(
                 view.getBookName(), 
-                view.getAuthorName(), 
+            view.getAuthor(), 
                 view.getGenre(),
                 view.getPublishedYear(), 
                 view.getStockText(), 
@@ -58,7 +58,7 @@ public class EditBook implements Runnable {
             ps.setInt(5, book.getStock());
             ps.setInt(6, bookId);
             int rows = ps.executeUpdate();
-            if (rows > 0) view.showSucess("Book updated Successfully.");
+            if (rows > 0) view.showSuccess("Book updated Successfully.");
             else view.showError("Failed to update book.");
         } catch (SQLException ex) {
             view.showError("Database error: " + ex.getMessage());

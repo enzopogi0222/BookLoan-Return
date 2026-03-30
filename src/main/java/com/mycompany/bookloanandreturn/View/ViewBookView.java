@@ -25,6 +25,7 @@ public class ViewBookView {
     private final Scene scene;
     private final TableView<Book> table;
     private final TextField searchField;
+    private final Label countLabel;
     private Runnable refreshListener;
     private Runnable filterListener;
     private Runnable editListener;
@@ -39,9 +40,18 @@ public class ViewBookView {
 
         table = new TableView<>();
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-        table.setFixedCellSize(34);
+        table.setFixedCellSize(40);
         table.setStyle(ViewStyles.TABLE_STYLE);
-        table.setPlaceholder(new Label("No books found"));
+        
+        // Improved Empty Placeholder
+        VBox emptyPlaceholder = new VBox(15);
+        emptyPlaceholder.setAlignment(Pos.CENTER);
+        Label iconLabel = new Label("📚");
+        iconLabel.setStyle("-fx-font-size: 48px;");
+        Label textLabel = new Label("No books found in your catalog");
+        textLabel.setStyle(ViewStyles.SUBTITLE_STYLE + "-fx-font-weight: bold;");
+        emptyPlaceholder.getChildren().addAll(iconLabel, textLabel);
+        table.setPlaceholder(emptyPlaceholder);
 
         TableColumn<Book, String> nameColumn = new TableColumn<>("Book Name");
         nameColumn.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().getBookName()));
@@ -52,7 +62,7 @@ public class ViewBookView {
         TableColumn<Book, String> genreColumn = new TableColumn<>("Genre");
         genreColumn.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().getGenre()));
 
-        TableColumn<Book, String> yearColumn = new TableColumn<>("Published Year");
+        TableColumn<Book, String> yearColumn = new TableColumn<>("Year");
         yearColumn.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().getPublishedYear()));
 
         TableColumn<Book, String> stockColumn = new TableColumn<>("Stock");
@@ -60,74 +70,81 @@ public class ViewBookView {
 
         TableColumn<Book, Void> actionColumn = new TableColumn<>("Actions");
         actionColumn.setCellFactory(col -> new TableCell<>() {
-            private final Button editButton = new Button("Edit");
+            private final Button editBtn = new Button("📝 Edit");
             {
-                ViewStyles.styleGreenButton(editButton);
-                editButton.setOnAction(e -> {
-                    int rowIndex = getIndex();
-                    if (rowIndex >= 0 && rowIndex < getTableView().getItems().size()) {
-                        Book selected = getTableView().getItems().get(rowIndex);
-                        getTableView().getSelectionModel().select(selected);
-                        fireEditRequested();
-                    }
+                ViewStyles.styleGreenButton(editBtn);
+                editBtn.setPrefHeight(30);
+                editBtn.setStyle(editBtn.getStyle() + "-fx-font-size: 11px; -fx-padding: 4 10 4 10;");
+                editBtn.setOnAction(e -> {
+                    Book selected = getTableView().getItems().get(getIndex());
+                    getTableView().getSelectionModel().select(selected);
+                    fireEditRequested();
                 });
             }
 
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                setGraphic(empty ? null : editButton);
+                if (empty) {
+                    setGraphic(null);
+                } else {
+                    HBox box = new HBox(editBtn);
+                    box.setAlignment(Pos.CENTER);
+                    setGraphic(box);
+                }
             }
         });
-        actionColumn.setPrefWidth(90);
+        actionColumn.setPrefWidth(100);
 
         table.getColumns().addAll(nameColumn, authorColumn, genreColumn, yearColumn, stockColumn, actionColumn);
 
-        Label titleLabel = new Label("Book Library");
+        Label titleLabel = new Label("Library Catalog");
         titleLabel.setStyle(ViewStyles.TITLE_STYLE);
 
-        Label searchLabel = new Label("Search:");
-        searchLabel.setStyle(ViewStyles.LABEL_STYLE);
+        Label subtitleLabel = new Label("Browse and manage your books");
+        subtitleLabel.setStyle(ViewStyles.SUBTITLE_STYLE);
+
+        countLabel = new Label("0 books");
+        countLabel.setStyle(ViewStyles.LABEL_STYLE + "-fx-background-color: #e8f5e9; -fx-padding: 4 12; -fx-background-radius: 12;");
+
         searchField = new TextField();
-        searchField.setPromptText("Search by title, author, genre, or year");
+        searchField.setPromptText("🔍 Search by title, author, or genre...");
         ViewStyles.styleInput(searchField);
-        searchField.setPrefWidth(360);
+        searchField.setPrefWidth(400);
         searchField.textProperty().addListener((obs, oldText, newText) -> fireFilterRequested());
 
-        HBox searchPanel = new HBox(10, searchLabel, searchField);
-        searchPanel.setAlignment(Pos.CENTER_LEFT);
-        HBox.setHgrow(searchField, Priority.ALWAYS);
-
-        Button refreshButton = new Button("Refresh");
+        Button refreshButton = new Button("🔄 Refresh");
         ViewStyles.styleGreenButton(refreshButton);
-        refreshButton.setPrefWidth(130);
+        refreshButton.setPrefWidth(120);
         refreshButton.setOnAction(e -> fireRefreshRequested());
 
-        Button editButton = new Button("Edit");
-        ViewStyles.styleGreenButton(editButton);
-        editButton.setPrefWidth(130);
-        editButton.setOnAction(e -> fireEditRequested());
-
-        Button backButton = new Button("Back");
-        ViewStyles.styleGreenButton(backButton);
-        backButton.setPrefWidth(120);
+        Button backButton = new Button("⬅ Back");
+        ViewStyles.styleSecondaryButton(backButton);
+        backButton.setPrefWidth(100);
         backButton.setOnAction(e -> fireBackRequested());
 
-        HBox bottomPanel = new HBox(10, backButton, refreshButton, editButton);
-        bottomPanel.setAlignment(Pos.CENTER_RIGHT);
+        HBox topActions = new HBox(15, searchField, refreshButton);
+        topActions.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(searchField, Priority.ALWAYS);
 
-        BorderPane mainPanel = new BorderPane();
-        mainPanel.setTop(new VBox(12, titleLabel, searchPanel));
-        mainPanel.setCenter(table);
-        mainPanel.setBottom(bottomPanel);
-        mainPanel.setPadding(new Insets(20));
+        VBox header = new VBox(12, titleLabel, subtitleLabel, new HBox(countLabel), topActions);
+        header.setPadding(new Insets(0, 0, 15, 0));
 
-        VBox card = new VBox(mainPanel);
-        card.setPadding(new Insets(10));
+        HBox footer = new HBox(backButton);
+        footer.setAlignment(Pos.CENTER_LEFT);
+        footer.setPadding(new Insets(15, 0, 0, 0));
+
+        BorderPane mainLayout = new BorderPane();
+        mainLayout.setTop(header);
+        mainLayout.setCenter(table);
+        mainLayout.setBottom(footer);
+        mainLayout.setPadding(new Insets(25));
+
+        VBox card = new VBox(mainLayout);
         ViewStyles.styleCard(card);
 
         StackPane root = new StackPane(card);
-        root.setPadding(new Insets(18));
+        root.setPadding(new Insets(25));
         root.setStyle(ViewStyles.BACKGROUND_STYLE);
 
         scene = new Scene(root, ViewStyles.SCENE_WIDTH, ViewStyles.SCENE_HEIGHT);
@@ -142,31 +159,16 @@ public class ViewBookView {
     public int getSelectedRowIndex() { return table.getSelectionModel().getSelectedIndex(); }
     public Stage getStage() { return stage; }
 
-    private void fireRefreshRequested() {
-        if (refreshListener != null) refreshListener.run();
-    }
-
-    private void fireFilterRequested() {
-        if (filterListener != null) filterListener.run();
-    }
-
-    private void fireEditRequested() {
-        if (editListener != null) editListener.run();
-    }
-
-    private void fireBackRequested() {
-        if (backListener != null) backListener.run();
-    }
+    private void fireRefreshRequested() { if (refreshListener != null) refreshListener.run(); }
+    private void fireFilterRequested() { if (filterListener != null) filterListener.run(); }
+    private void fireEditRequested() { if (editListener != null) editListener.run(); }
+    private void fireBackRequested() { if (backListener != null) backListener.run(); }
 
     public void displayBooks(List<Book> books) {
         table.getItems().setAll(books);
+        countLabel.setText(books.size() + (books.size() == 1 ? " book" : " books"));
     }
 
-    public void show() {
-        ViewStyles.showScenePreservingState(stage, scene);
-    }
-
-    public void showError(String message) {
-        ViewStyles.showErrorAlert(message);
-    }
+    public void show() { ViewStyles.showScenePreservingState(stage, scene); }
+    public void showError(String message) { ViewStyles.showErrorAlert(message); }
 }

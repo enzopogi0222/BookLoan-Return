@@ -1,8 +1,12 @@
 
 package com.mycompany.bookloanandreturn.Models;
-import com.mycompany.bookloanandreturn.DatabaseConnection;
+import java.time.Year;
 
 public class Book {
+    private static final int MAX_BOOK_NAME_LENGTH = 120;
+    private static final int MAX_AUTHOR_LENGTH = 80;
+    private static final int MAX_GENRE_LENGTH = 60;
+    private static final int MIN_PUBLISHED_YEAR = 1450;
    private int bookId;
    private String bookName;
    private String author;
@@ -19,6 +23,9 @@ public class Book {
     if (bookName == null || bookName.trim().isEmpty()){
         throw new IllegalArgumentException("Book Name cannot be empty");
     }
+    if (bookName.length() > MAX_BOOK_NAME_LENGTH){
+        throw new IllegalArgumentException("Book Name must be at most " + MAX_BOOK_NAME_LENGTH + " characters.");
+    }
        this.bookName = bookName;
    }
    
@@ -30,9 +37,12 @@ public class Book {
        if (author == null || author.trim().isEmpty()){
         throw new IllegalArgumentException("Author cannot be empty");
        }
+    if (author.length() > MAX_AUTHOR_LENGTH){
+     throw new IllegalArgumentException("Author must be at most " + MAX_AUTHOR_LENGTH + " characters.");
+    }
 
-       if (!author.matches("^[a-zA-Z\\s]+$")){
-        throw new IllegalArgumentException("Author must contain only letters");
+    if (!author.matches("^[a-zA-Z][a-zA-Z .'-]*$")){
+     throw new IllegalArgumentException("Author contains invalid characters.");
        }
 
        this.author = author;
@@ -46,6 +56,9 @@ public class Book {
     if (genre == null || genre.trim().isEmpty()){
         throw new IllegalArgumentException("Genre cannot be empty");
     }
+    if (genre.length() > MAX_GENRE_LENGTH){
+        throw new IllegalArgumentException("Genre must be at most " + MAX_GENRE_LENGTH + " characters.");
+    }
         this.genre = genre;
    }
    public String getPublishedYear(){
@@ -57,8 +70,9 @@ public class Book {
         throw new IllegalArgumentException("Published Year must be contains only numbers");
     }
     int year = Integer.parseInt(published_year);
-    if (year < 0){
-        throw new IllegalArgumentException("Published Year cannot be less than zero");
+    int currentYear = Year.now().getValue();
+    if (year < MIN_PUBLISHED_YEAR || year > currentYear){
+        throw new IllegalArgumentException("Published Year must be between " + MIN_PUBLISHED_YEAR + " and " + currentYear + ".");
     }
        this.published_year = published_year;
    }
