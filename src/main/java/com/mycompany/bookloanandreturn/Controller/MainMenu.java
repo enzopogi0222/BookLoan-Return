@@ -10,6 +10,8 @@ public class MainMenu {
         view = new MainMenuView(primaryStage);
         view.addAddBookListener(this::openAddBook);
         view.addViewBookListener(this::openViewBook);
+        view.addLoanBookListener(this::openLoanBook);
+        view.addReturnBookListener(this::openReturnBook);
         view.show();
     }
 
@@ -23,5 +25,13 @@ public class MainMenu {
 
     private void openViewBook() {
         new ViewBook(view.getStage(), view::show);
+    }
+
+    private void openLoanBook() {
+        new LoanBook(view.getStage(), view::show);
+    }
+
+    private void openReturnBook() {
+        new ReturnBook(view.getStage(), view::show);
     }
 }
