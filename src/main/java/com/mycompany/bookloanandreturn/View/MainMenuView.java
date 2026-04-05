@@ -19,6 +19,7 @@ public class MainMenuView {
     private final Button viewBookButton;
     private final Button loanBookButton;
     private final Button returnBookButton;
+    private final Button transactionsButton;
 
     public MainMenuView(Stage stage) {
         this.stage = stage;
@@ -50,7 +51,11 @@ public class MainMenuView {
         ViewStyles.styleGreenButton(returnBookButton, font);
         returnBookButton.setPrefWidth(220);
 
-        VBox centerPanel = new VBox(14, titleLabel, subtitleLabel, addBookButton, viewBookButton, loanBookButton, returnBookButton);
+        transactionsButton = new Button("Transactions");
+        ViewStyles.styleGreenButton(transactionsButton, font);
+        transactionsButton.setPrefWidth(220);
+
+        VBox centerPanel = new VBox(14, titleLabel, subtitleLabel, addBookButton, viewBookButton, loanBookButton, returnBookButton, transactionsButton);
         centerPanel.setAlignment(Pos.CENTER);
         centerPanel.setPadding(new Insets(28, 36, 28, 36));
         ViewStyles.styleCard(centerPanel);
@@ -77,6 +82,10 @@ public class MainMenuView {
 
     public void addReturnBookListener(Runnable listener) {
         returnBookButton.setOnAction(e -> listener.run());
+    }
+
+    public void addTransactionsListener(Runnable listener) {
+        transactionsButton.setOnAction(e -> listener.run());
     }
 
     public void show() {
