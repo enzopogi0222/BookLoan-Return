@@ -8,8 +8,6 @@ public class MainMenu {
 
     public MainMenu(Stage primaryStage) {
         view = new MainMenuView(primaryStage);
-        view.addAddBookListener(this::openAddBook);
-        view.addViewBookListener(this::openViewBook);
         view.addLoanBookListener(this::openLoanBook);
         view.addReturnBookListener(this::openReturnBook);
         view.addTransactionsListener(this::openTransactions);
@@ -18,14 +16,6 @@ public class MainMenu {
 
     public MainMenu() {
         this(new Stage());
-    }
-
-    private void openAddBook() {
-        new AddBook(view.getStage(), view::show);
-    }
-
-    private void openViewBook() {
-        new ViewBook(view.getStage(), view::show);
     }
 
     private void openLoanBook() {

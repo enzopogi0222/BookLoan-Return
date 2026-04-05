@@ -11,12 +11,10 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
-/** Main menu view with options for Add Book and View Book. */
+/** Main menu: loan, return, and transaction history. */
 public class MainMenuView {
     private final Stage stage;
     private final Scene scene;
-    private final Button addBookButton;
-    private final Button viewBookButton;
     private final Button loanBookButton;
     private final Button returnBookButton;
     private final Button transactionsButton;
@@ -32,16 +30,8 @@ public class MainMenuView {
         Label titleLabel = new Label("Main Menu");
         titleLabel.setStyle(ViewStyles.TITLE_STYLE);
 
-        Label subtitleLabel = new Label("Manage books quickly and clearly");
+        Label subtitleLabel = new Label("Loan, return, and review activity");
         subtitleLabel.setStyle(ViewStyles.SUBTITLE_STYLE);
-
-        addBookButton = new Button("Add Book");
-        ViewStyles.styleGreenButton(addBookButton, font);
-        addBookButton.setPrefWidth(220);
-
-        viewBookButton = new Button("View Book");
-        ViewStyles.styleGreenButton(viewBookButton, font);
-        viewBookButton.setPrefWidth(220);
 
         loanBookButton = new Button("Loan Book");
         ViewStyles.styleGreenButton(loanBookButton, font);
@@ -55,7 +45,7 @@ public class MainMenuView {
         ViewStyles.styleGreenButton(transactionsButton, font);
         transactionsButton.setPrefWidth(220);
 
-        VBox centerPanel = new VBox(14, titleLabel, subtitleLabel, addBookButton, viewBookButton, loanBookButton, returnBookButton, transactionsButton);
+        VBox centerPanel = new VBox(14, titleLabel, subtitleLabel, loanBookButton, returnBookButton, transactionsButton);
         centerPanel.setAlignment(Pos.CENTER);
         centerPanel.setPadding(new Insets(28, 36, 28, 36));
         ViewStyles.styleCard(centerPanel);
@@ -66,14 +56,6 @@ public class MainMenuView {
 
         scene = new Scene(root, ViewStyles.SCENE_WIDTH, ViewStyles.SCENE_HEIGHT);
         this.stage.setScene(scene);
-    }
-
-    public void addAddBookListener(Runnable listener) {
-        addBookButton.setOnAction(e -> listener.run());
-    }
-
-    public void addViewBookListener(Runnable listener) {
-        viewBookButton.setOnAction(e -> listener.run());
     }
 
     public void addLoanBookListener(Runnable listener) {
