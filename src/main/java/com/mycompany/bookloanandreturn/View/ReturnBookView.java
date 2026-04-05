@@ -68,21 +68,21 @@ public class ReturnBookView {
         notesField.setMaxWidth(480);
 
         Button returnButton = new Button("Record return");
-        ViewStyles.styleGreenButton(returnButton, font);
+        ViewStyles.stylePrimaryButton(returnButton, font);
         returnButton.setPrefWidth(150);
         returnButton.setOnAction(e -> {
             if (returnListener != null) returnListener.run();
         });
 
         Button refreshButton = new Button("Refresh");
-        ViewStyles.styleGreenButton(refreshButton, font);
+        ViewStyles.stylePrimaryButton(refreshButton, font);
         refreshButton.setPrefWidth(120);
         refreshButton.setOnAction(e -> {
             if (refreshListener != null) refreshListener.run();
         });
 
         Button backButton = new Button("Back");
-        ViewStyles.styleGreenButton(backButton, font);
+        ViewStyles.stylePrimaryButton(backButton, font);
         backButton.setPrefWidth(120);
         backButton.setOnAction(e -> {
             if (backListener != null) backListener.run();

@@ -91,12 +91,12 @@ public class TransactionsView {
         HBox.setHgrow(searchField, Priority.ALWAYS);
 
         Button refreshButton = new Button("Refresh");
-        ViewStyles.styleGreenButton(refreshButton);
+        ViewStyles.stylePrimaryButton(refreshButton);
         refreshButton.setPrefWidth(120);
         refreshButton.setOnAction(e -> fireRefreshRequested());
 
         Button backButton = new Button("Back");
-        ViewStyles.styleGreenButton(backButton);
+        ViewStyles.stylePrimaryButton(backButton);
         backButton.setPrefWidth(120);
         backButton.setOnAction(e -> fireBackRequested());
 

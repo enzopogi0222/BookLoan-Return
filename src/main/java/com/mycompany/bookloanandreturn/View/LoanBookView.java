@@ -65,21 +65,21 @@ public class LoanBookView {
         addRow(grid, 3, "Due date:", dueDatePicker);
 
         Button loanButton = new Button("Confirm loan");
-        ViewStyles.styleGreenButton(loanButton, font);
+        ViewStyles.stylePrimaryButton(loanButton, font);
         loanButton.setPrefWidth(160);
         loanButton.setOnAction(e -> {
             if (loanListener != null) loanListener.run();
         });
 
         Button refreshButton = new Button("Refresh list");
-        ViewStyles.styleGreenButton(refreshButton, font);
+        ViewStyles.stylePrimaryButton(refreshButton, font);
         refreshButton.setPrefWidth(140);
         refreshButton.setOnAction(e -> {
             if (refreshListener != null) refreshListener.run();
         });
 
         Button backButton = new Button("Back");
-        ViewStyles.styleGreenButton(backButton, font);
+        ViewStyles.stylePrimaryButton(backButton, font);
         backButton.setPrefWidth(120);
         backButton.setOnAction(e -> {
             if (backListener != null) backListener.run();
