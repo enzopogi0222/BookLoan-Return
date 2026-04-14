@@ -69,6 +69,19 @@ public class LoanBook {
             view.showError("Student ID must be a number.");
             return;
         }
+
+        // Verify student ID exists
+        if (!studentExists(studentId)) {
+            view.showError("Student ID not found.");
+            return;
+        }
+
+        // Check if student already has this book borrowed and not returned
+        if (hasActiveLoanForBook(studentId, choice.bookId())) {
+            view.showError("Student already has this book on loan. Return it first before borrowing again.");
+            return;
+        }
+
         LocalDate loanDate = view.getLoanDate();
         LocalDate dueDate = view.getDueDate();
         if (loanDate == null || dueDate == null) {
@@ -77,6 +90,13 @@ public class LoanBook {
         }
         if (dueDate.isBefore(loanDate)) {
             view.showError("Due date cannot be before loan date.");
+            return;
+        }
+
+        // Check student's active loan count (max 3 books allowed)
+        int activeLoans = countActiveLoansForStudent(studentId);
+        if (activeLoans >= 3) {
+            view.showError("Student has already borrowed the maximum of 3 books. Return a book before borrowing another.");
             return;
         }
 
@@ -101,7 +121,10 @@ public class LoanBook {
                     return;
                 }
                 conn.commit();
-                view.showSuccess("Loan recorded. Stock updated.");
+                String studentName = getStudentName(studentId);
+                String successMsg = String.format("Loan recorded for %s (Student #%d). Book: '%s'. Stock updated.",
+                        studentName, studentId, choice.title());
+                view.showSuccess(successMsg);
                 loadAvailableBooks();
             } catch (SQLException ex) {
                 conn.rollback();
@@ -123,5 +146,79 @@ public class LoanBook {
             return "Database needs the student_id column. Run sql/migration_add_student_id_to_loan.sql on bookloan_and_return.";
         }
         return "Database error: " + (msg != null ? msg : ex.getClass().getSimpleName());
+    }
+
+    private int countActiveLoansForStudent(long studentId) {
+        String sql = """
+                SELECT COUNT(*) AS active_count
+                FROM loan l
+                LEFT JOIN book_return r ON r.loan_id = l.loan_id
+                WHERE l.student_id = ? AND r.return_id IS NULL
+                """;
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, studentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("active_count");
+                }
+            }
+        } catch (SQLException ex) {
+            // Log error but allow loan attempt (will fail if DB issue)
+            System.err.println("Error counting active loans: " + ex.getMessage());
+        }
+        return 0;
+    }
+
+    private boolean studentExists(long studentId) {
+        String sql = "SELECT 1 FROM student WHERE student_id = ? LIMIT 1";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, studentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException ex) {
+            // Log error but treat as not found (fail safe)
+            System.err.println("Error checking student exists: " + ex.getMessage());
+        }
+        return false;
+    }
+
+    private boolean hasActiveLoanForBook(long studentId, int bookId) {
+        String sql = """
+                SELECT 1 FROM loan l
+                LEFT JOIN book_return r ON r.loan_id = l.loan_id
+                WHERE l.student_id = ? AND l.book_id = ? AND r.return_id IS NULL
+                LIMIT 1
+                """;
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, studentId);
+            ps.setInt(2, bookId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException ex) {
+            // Log error but treat as false to allow loan attempt
+            System.err.println("Error checking active loan for book: " + ex.getMessage());
+        }
+        return false;
+    }
+
+    private String getStudentName(long studentId) {
+        String sql = "SELECT full_name FROM student WHERE student_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, studentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("full_name");
+                }
+            }
+        } catch (SQLException ex) {
+            System.err.println("Error fetching student name: " + ex.getMessage());
+        }
+        return "Student #" + studentId;
     }
 }

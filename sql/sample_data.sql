@@ -1,15 +1,15 @@
 -- Run once against: bookloan_and_return
 -- Book columns match the Java app (ViewBook / AddBook).
 
--- Sample book (several copies on shelf)
+-- Sample books (several copies on shelf)
 INSERT INTO book (bookName, author, genre, published_year, stock)
-VALUES (
-  'Introduction to Java Programming',
-  'Y Daniel Liang',
-  'Computer Science',
-  '2020',
-  5
-);
+VALUES
+  ('Introduction to Java Programming', 'Y Daniel Liang', 'Computer Science', '2020', 5),
+  ('Data Structures and Algorithms', 'Thomas H. Cormen', 'Computer Science', '2009', 3),
+  ('Clean Code', 'Robert C. Martin', 'Software Engineering', '2008', 4),
+  ('The Pragmatic Programmer', 'Andrew Hunt', 'Software Engineering', '1999', 3),
+  ('Design Patterns', 'Erich Gamma', 'Software Engineering', '1994', 2),
+  ('Database Systems', 'Abraham Silberschatz', 'Computer Science', '2019', 4);
 
 -- Optional: store students in the database for your own lookups / future features.
 -- The current loan screen uses borrower text; when testing loans, use this student name.
