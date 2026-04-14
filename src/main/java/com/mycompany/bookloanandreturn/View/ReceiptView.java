@@ -1,6 +1,15 @@
 package com.mycompany.bookloanandreturn.View;
 
+import java.awt.Desktop;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.format.DateTimeFormatter;
+
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
 
 import com.mycompany.bookloanandreturn.Models.MultiReceiptData;
 import com.mycompany.bookloanandreturn.Models.ReceiptData;
@@ -9,7 +18,6 @@ import com.mycompany.bookloanandreturn.util.OverdueFine;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.print.PrinterJob;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -30,6 +38,8 @@ public class ReceiptView {
     private final VBox receiptContent;
     private Runnable payListener;
     private boolean paid = false;
+    private String borrowerName = "";
+    private String studentId = "";
 
     public ReceiptView(Stage owner) {
         dialog = new Stage();
@@ -128,6 +138,8 @@ public class ReceiptView {
 
     public void displayMultiReceipt(MultiReceiptData data) {
         receiptContent.getChildren().clear();
+        this.borrowerName = data.getBorrowerName() != null ? data.getBorrowerName() : "";
+        this.studentId = data.getStudentId() != null ? data.getStudentId() : "";
 
         ImageView logo = new ImageView(ViewStyles.loadBrandLogo());
         logo.setFitHeight(60);
@@ -224,10 +236,10 @@ public class ReceiptView {
                 dialog.close();
             });
 
-            Button printButton = new Button("Print Receipt");
+            Button printButton = new Button("Print");
             ViewStyles.stylePrimaryButton(printButton);
             printButton.setDefaultButton(false);
-            printButton.setOnAction(e -> printReceipt());
+            printButton.setOnAction(e -> printToWord());
 
             buttonBox.getChildren().addAll(closeButton, printButton, payButton);
         } else {
@@ -246,20 +258,118 @@ public class ReceiptView {
         return paid;
     }
 
-    private void printReceipt() {
-        PrinterJob job = PrinterJob.createPrinterJob();
-        if (job == null) {
-            ViewStyles.showErrorAlert("Could not create print job.");
-            return;
-        }
-
-        if (job.showPrintDialog(dialog)) {
-            boolean success = job.printPage(receiptContent);
-            if (success) {
-                job.endJob();
-            } else {
-                ViewStyles.showErrorAlert("Printing failed.");
+    private void printToWord() {
+        try {
+            // Create temp directory
+            File tempDir = new File(System.getProperty("java.io.tmpdir"), "BookLoanReceipts");
+            if (!tempDir.exists()) {
+                tempDir.mkdirs();
             }
+
+            // Generate temp filename
+            String filename = studentId.isEmpty() ? "Receipt.docx" : studentId + ".docx";
+            File tempFile = new File(tempDir, filename);
+
+            // Create Word document with standard paper size to avoid issues
+            try (XWPFDocument document = new XWPFDocument();
+                 FileOutputStream out = new FileOutputStream(tempFile)) {
+
+                // Add logo
+                try {
+                    InputStream logoStream = getClass().getResourceAsStream("/images/RMMC1960_400x400.jpg");
+                    if (logoStream != null) {
+                        byte[] logoBytes = logoStream.readAllBytes();
+                        logoStream.close();
+                        int pictureType = org.apache.poi.xwpf.usermodel.Document.PICTURE_TYPE_JPEG;
+                        document.addPictureData(logoBytes, pictureType);
+
+                        XWPFParagraph logoPara = document.createParagraph();
+                        logoPara.setAlignment(org.apache.poi.xwpf.usermodel.ParagraphAlignment.CENTER);
+                        XWPFRun logoRun = logoPara.createRun();
+                        logoRun.addPicture(new java.io.ByteArrayInputStream(logoBytes), pictureType, "logo.jpg",
+                            org.apache.poi.util.Units.toEMU(40), org.apache.poi.util.Units.toEMU(40));
+                    }
+                } catch (Exception e) {
+                    // Logo not found, continue without it
+                }
+
+                // Title
+                XWPFParagraph title = document.createParagraph();
+                title.setAlignment(org.apache.poi.xwpf.usermodel.ParagraphAlignment.CENTER);
+                XWPFRun titleRun = title.createRun();
+                titleRun.setText("RMMC Library");
+                titleRun.setBold(true);
+                titleRun.setFontSize(14);
+
+                XWPFParagraph subtitle = document.createParagraph();
+                subtitle.setAlignment(org.apache.poi.xwpf.usermodel.ParagraphAlignment.CENTER);
+                XWPFRun subtitleRun = subtitle.createRun();
+                subtitleRun.setText("RECEIPT");
+                subtitleRun.setBold(true);
+                subtitleRun.setFontSize(12);
+
+                XWPFParagraph dash = document.createParagraph();
+                dash.setAlignment(org.apache.poi.xwpf.usermodel.ParagraphAlignment.CENTER);
+                XWPFRun dashRun = dash.createRun();
+                dashRun.setText("----------------------------------------");
+                dashRun.setFontSize(10);
+
+                // Extract receipt data from UI components
+                for (javafx.scene.Node node : receiptContent.getChildren()) {
+                    if (node instanceof Label label) {
+                        XWPFParagraph p = document.createParagraph();
+                        p.setAlignment(org.apache.poi.xwpf.usermodel.ParagraphAlignment.LEFT);
+                        XWPFRun run = p.createRun();
+                        run.setText(label.getText());
+                        run.setFontSize(9);
+                    } else if (node instanceof VBox vbox) {
+                        for (javafx.scene.Node child : vbox.getChildren()) {
+                            if (child instanceof Label label) {
+                                XWPFParagraph p = document.createParagraph();
+                                p.setAlignment(org.apache.poi.xwpf.usermodel.ParagraphAlignment.LEFT);
+                                XWPFRun run = p.createRun();
+                                run.setText(label.getText());
+                                run.setFontSize(9);
+                            }
+                        }
+                    }
+                }
+
+                // Footer dash
+                XWPFParagraph dash2 = document.createParagraph();
+                dash2.setAlignment(org.apache.poi.xwpf.usermodel.ParagraphAlignment.CENTER);
+                XWPFRun dashRun2 = dash2.createRun();
+                dashRun2.setText("----------------------------------------");
+                dashRun2.setFontSize(10);
+
+                // Thank you message
+                XWPFParagraph thanks = document.createParagraph();
+                thanks.setAlignment(org.apache.poi.xwpf.usermodel.ParagraphAlignment.CENTER);
+                XWPFRun thanksRun = thanks.createRun();
+                thanksRun.setText("Thank you for using RMMC Library!");
+                thanksRun.setFontSize(9);
+
+                // Set receipt paper size at the END (after all content)
+                org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSectPr sectPr = document.getDocument().getBody().addNewSectPr();
+                org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPageSz pgSz = sectPr.addNewPgSz();
+                pgSz.setW(java.math.BigInteger.valueOf(4320)); // 3 inches
+                pgSz.setH(java.math.BigInteger.valueOf(8640)); // 6 inches
+
+                // Set narrow margins
+                org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPageMar pgMar = sectPr.addNewPgMar();
+                pgMar.setLeft(java.math.BigInteger.valueOf(288));
+                pgMar.setRight(java.math.BigInteger.valueOf(288));
+                pgMar.setTop(java.math.BigInteger.valueOf(288));
+                pgMar.setBottom(java.math.BigInteger.valueOf(288));
+
+                document.write(out);
+            }
+
+            // Open the Word file directly with Word
+            Desktop.getDesktop().open(tempFile);
+
+        } catch (IOException e) {
+            ViewStyles.showErrorAlert("Failed to print receipt: " + e.getMessage());
         }
     }
 

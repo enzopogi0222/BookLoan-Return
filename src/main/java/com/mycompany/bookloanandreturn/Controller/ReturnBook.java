@@ -133,6 +133,7 @@ public class ReturnBook {
 
             if (multiReceipt.getBorrowerName() == null) {
                 multiReceipt.setBorrowerName(loan.getBorrowerName());
+                multiReceipt.setStudentId(String.valueOf(loan.getStudentId()));
             }
             LocalDate loanDate = (loan.getLoanDate() != null && !loan.getLoanDate().isEmpty())
                     ? LocalDate.parse(loan.getLoanDate()) : null;

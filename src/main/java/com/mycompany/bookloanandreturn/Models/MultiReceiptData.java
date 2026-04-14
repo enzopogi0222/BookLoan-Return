@@ -7,6 +7,7 @@ import java.util.List;
 /** Data model for a combined receipt with multiple books. */
 public class MultiReceiptData {
     private String borrowerName;
+    private String studentId;
     private LocalDate returnDate;
     private final List<ReceiptItem> items = new ArrayList<>();
     private String notes;
@@ -38,6 +39,14 @@ public class MultiReceiptData {
 
     public void setBorrowerName(String borrowerName) {
         this.borrowerName = borrowerName;
+    }
+
+    public String getStudentId() {
+        return studentId;
+    }
+
+    public void setStudentId(String studentId) {
+        this.studentId = studentId;
     }
 
     public LocalDate getReturnDate() {
