@@ -22,6 +22,7 @@ import javafx.stage.Stage;
 
 public class ReturnBook {
     private final ReturnBookView view;
+    private List<LoanRecord> allLoans = new ArrayList<>();
 
     public ReturnBook(Stage stage, Runnable onReturnMenu) {
         view = new ReturnBookView(stage);
@@ -29,6 +30,7 @@ public class ReturnBook {
             if (onReturnMenu != null) onReturnMenu.run();
         });
         view.addRefreshListener(this::loadActiveLoans);
+        view.addFilterListener(this::applyFilter);
         view.addReturnListener(this::recordReturn);
         loadActiveLoans();
         view.show();
@@ -71,101 +73,146 @@ public class ReturnBook {
                 }
                 rows.add(lr);
             }
-            view.displayLoans(rows);
+            allLoans = rows;
+            applyFilter();
         } catch (SQLException ex) {
             view.showError(dbMessage(ex));
         }
     }
 
-    private void recordReturn() {
-        int idx = view.getSelectedRowIndex();
-        LoanRecord selected = view.getLoanAt(idx);
-        if (selected == null) {
-            view.showError("Please select an active loan to return.");
+    private void applyFilter() {
+        String q = view.getSearchText();
+        if (q.isEmpty()) {
+            view.displayLoans(allLoans);
             return;
         }
-        LocalDate returnDay = LocalDate.now();
-        LocalDate due = selected.getDueDateValue();
-        int fine = OverdueFine.finePesos(due, returnDay);
-        long daysLate = due != null ? ChronoUnit.DAYS.between(due, returnDay) : 0L;
+        List<LoanRecord> filtered = new ArrayList<>();
+        for (LoanRecord lr : allLoans) {
+            if (matches(lr, q)) {
+                filtered.add(lr);
+            }
+        }
+        view.displayLoans(filtered);
+    }
+
+    private static boolean matches(LoanRecord lr, String q) {
+        return contains(lr.getBookTitle(), q)
+                || contains(lr.getBorrowerName(), q)
+                || contains(lr.getStudentName(), q)
+                || contains(lr.getPhone(), q)
+                || contains(lr.getLoanDate(), q)
+                || contains(lr.getDueDate(), q);
+    }
+
+    private static boolean contains(String value, String q) {
+        return value != null && value.toLowerCase().contains(q);
+    }
+
+    private void recordReturn() {
+        List<LoanRecord> selected = view.getSelectedLoans();
+        if (selected.isEmpty()) {
+            view.showError("Please select at least one active loan to return.");
+            return;
+        }
 
         String notes = view.getNotes();
-        String insReturn = "INSERT INTO book_return (loan_id, return_date, fine_pesos, notes) VALUES (?, ?, ?, ?)";
-        String incStock = "UPDATE book SET stock = stock + 1 WHERE book_id = ?";
+        LocalDate returnDay = LocalDate.now();
+        int totalFine = 0;
+        int successCount = 0;
+        StringBuilder errors = new StringBuilder();
 
         try (Connection conn = DatabaseConnection.getConnection()) {
             conn.setAutoCommit(false);
-            try (PreparedStatement ins = conn.prepareStatement(insReturn, Statement.RETURN_GENERATED_KEYS);
-                 PreparedStatement upd = conn.prepareStatement(incStock)) {
-                ins.setInt(1, selected.getLoanId());
-                ins.setDate(2, Date.valueOf(returnDay));
-                ins.setInt(3, fine);
-                if (notes.isEmpty()) {
-                    ins.setNull(4, java.sql.Types.VARCHAR);
-                } else {
-                    ins.setString(4, notes);
-                }
-                ins.executeUpdate();
-                int returnId;
-                try (ResultSet generatedKeys = ins.getGeneratedKeys()) {
-                    if (generatedKeys.next()) {
-                        returnId = generatedKeys.getInt(1);
-                    } else {
-                        returnId = 0;
-                    }
-                }
-                upd.setInt(1, selected.getBookId());
-                int n = upd.executeUpdate();
-                if (n != 1) {
-                    conn.rollback();
-                    view.showError("Could not update book stock.");
-                    return;
-                }
-                conn.commit();
-                if (fine > 0) {
-                    ReceiptData receipt = new ReceiptData();
-                    receipt.setReturnId(returnId);
-                    receipt.setLoanId(selected.getLoanId());
-                    receipt.setBookTitle(selected.getBookTitle());
-                    receipt.setBorrowerName(selected.getBorrowerName());
-                    if (selected.getLoanDate() != null && !selected.getLoanDate().isEmpty()) {
-                        receipt.setLoanDate(LocalDate.parse(selected.getLoanDate()));
-                    }
-                    receipt.setDueDate(due);
-                    receipt.setReturnDate(returnDay);
-                    receipt.setDaysLate(daysLate);
-                    receipt.setFineAmount(fine);
-                    receipt.setNotes(notes);
+            String insReturn = "INSERT INTO book_return (loan_id, return_date, fine_pesos, notes) VALUES (?, ?, ?, ?)";
+            String incStock = "UPDATE book SET stock = stock + 1 WHERE book_id = ?";
 
-                    ReceiptView receiptView = new ReceiptView(view.getStage());
-                    receiptView.displayReceipt(receipt);
-                    receiptView.addPayListener(() -> {
-                        try {
-                            saveReceiptAndMarkPaid(conn, receipt);
-                        } catch (SQLException ex) {
-                            view.showError(dbMessage(ex));
+            for (LoanRecord loan : selected) {
+                LocalDate due = loan.getDueDateValue();
+                int fine = OverdueFine.finePesos(due, returnDay);
+                long daysLate = due != null ? ChronoUnit.DAYS.between(due, returnDay) : 0L;
+
+                try (PreparedStatement ins = conn.prepareStatement(insReturn, Statement.RETURN_GENERATED_KEYS);
+                     PreparedStatement upd = conn.prepareStatement(incStock)) {
+                    ins.setInt(1, loan.getLoanId());
+                    ins.setDate(2, Date.valueOf(returnDay));
+                    ins.setInt(3, fine);
+                    if (notes.isEmpty()) {
+                        ins.setNull(4, java.sql.Types.VARCHAR);
+                    } else {
+                        ins.setString(4, notes);
+                    }
+                    ins.executeUpdate();
+                    int returnId;
+                    try (ResultSet generatedKeys = ins.getGeneratedKeys()) {
+                        if (generatedKeys.next()) {
+                            returnId = generatedKeys.getInt(1);
+                        } else {
+                            returnId = 0;
                         }
-                    });
-                    receiptView.show();
+                    }
+                    upd.setInt(1, loan.getBookId());
+                    int n = upd.executeUpdate();
+                    if (n != 1) {
+                        conn.rollback();
+                        view.showError("Could not update book stock for: " + loan.getBookTitle());
+                        conn.setAutoCommit(true);
+                        return;
+                    }
+                    totalFine += fine;
+                    successCount++;
+
+                    // Show receipt for fines > 0
+                    if (fine > 0) {
+                        ReceiptData receipt = new ReceiptData();
+                        receipt.setReturnId(returnId);
+                        receipt.setLoanId(loan.getLoanId());
+                        receipt.setBookTitle(loan.getBookTitle());
+                        receipt.setBorrowerName(loan.getBorrowerName());
+                        if (loan.getLoanDate() != null && !loan.getLoanDate().isEmpty()) {
+                            receipt.setLoanDate(LocalDate.parse(loan.getLoanDate()));
+                        }
+                        receipt.setDueDate(due);
+                        receipt.setReturnDate(returnDay);
+                        receipt.setDaysLate(daysLate);
+                        receipt.setFineAmount(fine);
+                        receipt.setNotes(notes);
+
+                        ReceiptView receiptView = new ReceiptView(view.getStage());
+                        receiptView.displayReceipt(receipt);
+                        receiptView.addPayListener(() -> {
+                            try {
+                                saveReceiptAndMarkPaid(conn, receipt);
+                            } catch (SQLException ex) {
+                                view.showError(dbMessage(ex));
+                            }
+                        });
+                        receiptView.show();
+                    }
+                } catch (SQLException ex) {
+                    conn.rollback();
+                    conn.setAutoCommit(true);
+                    if (ex.getErrorCode() == 1062 || (ex.getMessage() != null && ex.getMessage().contains("Duplicate"))) {
+                        errors.append(loan.getBookTitle()).append(" was already returned.\n");
+                    } else {
+                        errors.append("Error returning ").append(loan.getBookTitle()).append(": ").append(ex.getMessage()).append("\n");
+                    }
+                    continue;
                 }
-                String successMsg = fine > 0
-                        ? "Return recorded. Overdue fine: "
-                                + OverdueFine.formatPesos(fine)
-                                + " ("
-                                + daysLate
-                                + " day(s) after due date). Stock updated."
-                        : "Return recorded. No overdue fine. Stock updated.";
+            }
+            conn.commit();
+            conn.setAutoCommit(true);
+
+            if (errors.length() > 0) {
+                view.showError(errors.toString());
+            }
+            if (successCount > 0) {
+                String successMsg = totalFine > 0
+                        ? "Returned " + successCount + " book(s). Total overdue fine: "
+                                + OverdueFine.formatPesos(totalFine) + ". Stock updated."
+                        : "Returned " + successCount + " book(s). No overdue fine. Stock updated.";
                 view.showSuccess(successMsg);
+                view.clearSelection();
                 loadActiveLoans();
-            } catch (SQLException ex) {
-                conn.rollback();
-                if (ex.getErrorCode() == 1062 || (ex.getMessage() != null && ex.getMessage().contains("Duplicate"))) {
-                    view.showError("This loan was already returned.");
-                } else {
-                    view.showError(dbMessage(ex));
-                }
-            } finally {
-                conn.setAutoCommit(true);
             }
         } catch (SQLException ex) {
             view.showError(dbMessage(ex));
