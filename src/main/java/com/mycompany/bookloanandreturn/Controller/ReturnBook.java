@@ -36,10 +36,12 @@ public class ReturnBook {
 
     private void loadActiveLoans() {
         String sql = """
-                SELECT l.loan_id, l.book_id, b.bookName, l.borrower_name, l.loan_date, l.due_date
+                SELECT l.loan_id, l.book_id, b.bookName, l.borrower_name, l.student_id,
+                       s.full_name AS student_name, s.phone, l.loan_date, l.due_date
                 FROM loan l
                 INNER JOIN book b ON b.book_id = l.book_id
                 LEFT JOIN book_return r ON r.loan_id = l.loan_id
+                LEFT JOIN student s ON s.student_id = l.student_id
                 WHERE r.return_id IS NULL
                 ORDER BY l.loan_date DESC, l.loan_id DESC
                 """;
@@ -54,6 +56,9 @@ public class ReturnBook {
                 String title = rs.getString("bookName");
                 lr.setBookTitle(title != null && !title.isBlank() ? title : "—");
                 lr.setBorrowerName(rs.getString("borrower_name"));
+                lr.setStudentId(rs.getLong("student_id"));
+                lr.setStudentName(rs.getString("student_name"));
+                lr.setPhone(rs.getString("phone"));
                 Date ld = rs.getDate("loan_date");
                 Date dd = rs.getDate("due_date");
                 lr.setLoanDate(ld != null ? ld.toLocalDate().toString() : "");

@@ -1,9 +1,11 @@
 package com.mycompany.bookloanandreturn.View;
 
-import com.mycompany.bookloanandreturn.Models.AvailableBook;
-import com.mycompany.bookloanandreturn.View.common.ViewStyles;
 import java.time.LocalDate;
 import java.util.List;
+
+import com.mycompany.bookloanandreturn.Models.AvailableBook;
+import com.mycompany.bookloanandreturn.View.common.ViewStyles;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -47,7 +49,7 @@ public class LoanBookView {
         bookCombo.setPrefWidth(420);
 
         borrowerField = new TextField();
-        borrowerField.setPromptText("Borrower name (e.g. Maria Santos)");
+        borrowerField.setPromptText("Student ID");
         ViewStyles.styleInput(borrowerField);
         borrowerField.setPrefWidth(420);
 
@@ -66,7 +68,7 @@ public class LoanBookView {
         grid.setHgap(14);
         grid.setVgap(12);
         addRow(grid, 0, "Book:", bookCombo);
-        addRow(grid, 1, "Borrower:", borrowerField);
+        addRow(grid, 1, "Student ID:", borrowerField);
         addRow(grid, 2, "Loan date:", loanDatePicker);
         addRow(grid, 3, "Due date:", dueDatePicker);
 

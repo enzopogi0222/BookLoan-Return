@@ -43,12 +43,14 @@ public class Transactions implements Runnable {
 
     private void loadTransactions() {
         String sql = """
-                SELECT l.loan_id, b.bookName, l.borrower_name, l.loan_date, l.due_date,
+                SELECT l.loan_id, b.bookName, l.borrower_name, l.student_id,
+                       s.full_name AS student_name, s.phone, l.loan_date, l.due_date,
                        r.return_date, r.notes, COALESCE(r.fine_pesos, 0) AS fine_pesos,
                        COALESCE(r.fine_paid, FALSE) AS fine_paid
                 FROM loan l
                 INNER JOIN book b ON b.book_id = l.book_id
                 LEFT JOIN book_return r ON r.loan_id = l.loan_id
+                LEFT JOIN student s ON s.student_id = l.student_id
                 ORDER BY l.loan_id DESC
                 """;
         List<LoanTransaction> rows = new ArrayList<>();
@@ -62,6 +64,9 @@ public class Transactions implements Runnable {
                 t.setBookTitle(title != null && !title.isBlank() ? title : "—");
                 String borrower = rs.getString("borrower_name");
                 t.setBorrowerName(borrower != null ? borrower : "—");
+                t.setStudentId(rs.getLong("student_id"));
+                t.setStudentName(rs.getString("student_name"));
+                t.setPhone(rs.getString("phone"));
                 Date ld = rs.getDate("loan_date");
                 Date dd = rs.getDate("due_date");
                 t.setLoanDate(ld != null ? ld.toLocalDate().toString() : "");

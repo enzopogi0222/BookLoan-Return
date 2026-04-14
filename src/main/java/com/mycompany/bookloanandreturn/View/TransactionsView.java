@@ -50,8 +50,23 @@ public class TransactionsView {
         TableColumn<LoanTransaction, String> bookCol = new TableColumn<>("Book");
         bookCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().getBookTitle()));
 
-        TableColumn<LoanTransaction, String> borrowerCol = new TableColumn<>("Borrower");
-        borrowerCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().getBorrowerName()));
+        TableColumn<LoanTransaction, String> borrowerCol = new TableColumn<>("Student ID");
+        borrowerCol.setCellValueFactory(data -> {
+            long id = data.getValue().getStudentId();
+            return new ReadOnlyStringWrapper(id > 0 ? String.valueOf(id) : "—");
+        });
+
+        TableColumn<LoanTransaction, String> phoneCol = new TableColumn<>("Phone");
+        phoneCol.setCellValueFactory(data -> {
+            String phone = data.getValue().getPhone();
+            return new ReadOnlyStringWrapper(phone != null ? phone : "—");
+        });
+
+        TableColumn<LoanTransaction, String> studentNameCol = new TableColumn<>("Student Name");
+        studentNameCol.setCellValueFactory(data -> {
+            String name = data.getValue().getStudentName();
+            return new ReadOnlyStringWrapper(name != null ? name : "—");
+        });
 
         TableColumn<LoanTransaction, String> loanCol = new TableColumn<>("Loan date");
         loanCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().getLoanDate()));
@@ -90,6 +105,8 @@ public class TransactionsView {
         table.getColumns().add(idCol);
         table.getColumns().add(bookCol);
         table.getColumns().add(borrowerCol);
+        table.getColumns().add(phoneCol);
+        table.getColumns().add(studentNameCol);
         table.getColumns().add(loanCol);
         table.getColumns().add(dueCol);
         table.getColumns().add(retCol);

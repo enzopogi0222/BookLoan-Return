@@ -1,10 +1,12 @@
 package com.mycompany.bookloanandreturn.View;
 
+import java.time.LocalDate;
+import java.util.List;
+
 import com.mycompany.bookloanandreturn.Models.LoanRecord;
 import com.mycompany.bookloanandreturn.View.common.ViewStyles;
 import com.mycompany.bookloanandreturn.util.OverdueFine;
-import java.time.LocalDate;
-import java.util.List;
+
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -51,6 +53,18 @@ public class ReturnBookView {
         TableColumn<LoanRecord, String> borrowerCol = new TableColumn<>("Borrower");
         borrowerCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().getBorrowerName()));
 
+        TableColumn<LoanRecord, String> studentNameCol = new TableColumn<>("Student Name");
+        studentNameCol.setCellValueFactory(data -> {
+            String name = data.getValue().getStudentName();
+            return new ReadOnlyStringWrapper(name != null ? name : "—");
+        });
+
+        TableColumn<LoanRecord, String> phoneCol = new TableColumn<>("Phone");
+        phoneCol.setCellValueFactory(data -> {
+            String phone = data.getValue().getPhone();
+            return new ReadOnlyStringWrapper(phone != null ? phone : "—");
+        });
+
         TableColumn<LoanRecord, String> loanCol = new TableColumn<>("Loan date");
         loanCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().getLoanDate()));
 
@@ -67,7 +81,7 @@ public class ReturnBookView {
             return new ReadOnlyStringWrapper(OverdueFine.formatPesos(est));
         });
 
-        table.getColumns().addAll(titleCol, borrowerCol, loanCol, dueCol, estFineCol);
+        table.getColumns().addAll(titleCol, borrowerCol, studentNameCol, phoneCol, loanCol, dueCol, estFineCol);
 
         Label titleLabel = new Label("Return a book");
         titleLabel.setStyle(ViewStyles.TITLE_STYLE);

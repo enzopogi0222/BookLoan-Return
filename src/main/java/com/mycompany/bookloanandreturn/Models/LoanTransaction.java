@@ -5,6 +5,9 @@ public class LoanTransaction {
     private int loanId;
     private String bookTitle;
     private String borrowerName;
+    private long studentId;
+    private String studentName;
+    private String phone;
     private String loanDate;
     private String dueDate;
     private String returnDate;
@@ -37,6 +40,30 @@ public class LoanTransaction {
 
     public void setBorrowerName(String borrowerName) {
         this.borrowerName = borrowerName;
+    }
+
+    public long getStudentId() {
+        return studentId;
+    }
+
+    public void setStudentId(long studentId) {
+        this.studentId = studentId;
+    }
+
+    public String getStudentName() {
+        return studentName;
+    }
+
+    public void setStudentName(String studentName) {
+        this.studentName = studentName;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 
     public String getLoanDate() {

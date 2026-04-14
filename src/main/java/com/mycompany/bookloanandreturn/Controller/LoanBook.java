@@ -1,8 +1,5 @@
 package com.mycompany.bookloanandreturn.Controller;
 
-import com.mycompany.bookloanandreturn.DatabaseConnection;
-import com.mycompany.bookloanandreturn.Models.AvailableBook;
-import com.mycompany.bookloanandreturn.View.LoanBookView;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -11,6 +8,11 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.mycompany.bookloanandreturn.DatabaseConnection;
+import com.mycompany.bookloanandreturn.Models.AvailableBook;
+import com.mycompany.bookloanandreturn.View.LoanBookView;
+
 import javafx.stage.Stage;
 
 public class LoanBook {
@@ -55,9 +57,16 @@ public class LoanBook {
             view.showError("Please select a book.");
             return;
         }
-        String borrower = view.getBorrowerName();
-        if (borrower.isEmpty()) {
-            view.showError("Borrower name is required.");
+        String studentIdText = view.getBorrowerName().trim();
+        if (studentIdText.isEmpty()) {
+            view.showError("Student ID is required.");
+            return;
+        }
+        long studentId;
+        try {
+            studentId = Long.parseLong(studentIdText);
+        } catch (NumberFormatException e) {
+            view.showError("Student ID must be a number.");
             return;
         }
         LocalDate loanDate = view.getLoanDate();
@@ -71,7 +80,7 @@ public class LoanBook {
             return;
         }
 
-        String insertLoan = "INSERT INTO loan (book_id, borrower_name, loan_date, due_date) VALUES (?, ?, ?, ?)";
+        String insertLoan = "INSERT INTO loan (book_id, borrower_name, student_id, loan_date, due_date) VALUES (?, ?, ?, ?, ?)";
         String decStock = "UPDATE book SET stock = stock - 1 WHERE book_id = ? AND stock > 0";
 
         try (Connection conn = DatabaseConnection.getConnection()) {
@@ -79,9 +88,10 @@ public class LoanBook {
             try (PreparedStatement ins = conn.prepareStatement(insertLoan);
                  PreparedStatement upd = conn.prepareStatement(decStock)) {
                 ins.setInt(1, choice.bookId());
-                ins.setString(2, borrower);
-                ins.setDate(3, Date.valueOf(loanDate));
-                ins.setDate(4, Date.valueOf(dueDate));
+                ins.setString(2, "Student #" + studentId);
+                ins.setLong(3, studentId);
+                ins.setDate(4, Date.valueOf(loanDate));
+                ins.setDate(5, Date.valueOf(dueDate));
                 ins.executeUpdate();
                 upd.setInt(1, choice.bookId());
                 int n = upd.executeUpdate();
@@ -108,6 +118,9 @@ public class LoanBook {
         String msg = ex.getMessage();
         if (msg != null && (msg.contains("doesn't exist") || msg.contains("Unknown table"))) {
             return "Loan tables are missing. Run sql/schema_loan_return.sql on database bookloan_and_return.";
+        }
+        if (msg != null && msg.contains("student_id")) {
+            return "Database needs the student_id column. Run sql/migration_add_student_id_to_loan.sql on bookloan_and_return.";
         }
         return "Database error: " + (msg != null ? msg : ex.getClass().getSimpleName());
     }
