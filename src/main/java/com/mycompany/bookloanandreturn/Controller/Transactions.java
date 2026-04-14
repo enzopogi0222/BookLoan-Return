@@ -112,14 +112,19 @@ public class Transactions implements Runnable {
     private static boolean matches(LoanTransaction t, String q) {
         return contains(t.getBookTitle(), q)
                 || contains(t.getBorrowerName(), q)
+                || contains(t.getStudentName(), q)
+                || contains(t.getPhone(), q)
                 || contains(t.getLoanDate(), q)
                 || contains(t.getDueDate(), q)
                 || contains(t.getReturnDate(), q)
                 || contains(t.getStatus(), q)
                 || contains(t.getNotes(), q)
                 || String.valueOf(t.getLoanId()).contains(q)
+                || String.valueOf(t.getStudentId()).contains(q)
                 || contains(OverdueFine.formatPesos(t.getFinePesos()), q)
-                || String.valueOf(t.getFinePesos()).contains(q);
+                || String.valueOf(t.getFinePesos()).contains(q)
+                || (t.isFinePaid() && (q.equals("yes") || q.equals("paid")))
+                || (!t.isFinePaid() && t.getFinePesos() > 0 && (q.equals("no") || q.equals("unpaid")));
     }
 
     private static boolean contains(String value, String q) {
