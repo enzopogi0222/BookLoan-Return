@@ -2,6 +2,8 @@ package com.mycompany.bookloanandreturn.View;
 
 import com.mycompany.bookloanandreturn.Models.LoanRecord;
 import com.mycompany.bookloanandreturn.View.common.ViewStyles;
+import com.mycompany.bookloanandreturn.util.OverdueFine;
+import java.time.LocalDate;
 import java.util.List;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.geometry.Insets;
@@ -55,7 +57,17 @@ public class ReturnBookView {
         TableColumn<LoanRecord, String> dueCol = new TableColumn<>("Due date");
         dueCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().getDueDate()));
 
-        table.getColumns().addAll(titleCol, borrowerCol, loanCol, dueCol);
+        TableColumn<LoanRecord, String> estFineCol = new TableColumn<>("Fine if returned today");
+        estFineCol.setCellValueFactory(data -> {
+            LocalDate due = data.getValue().getDueDateValue();
+            if (due == null) {
+                return new ReadOnlyStringWrapper("—");
+            }
+            int est = OverdueFine.estimatedFineIfReturnedToday(due);
+            return new ReadOnlyStringWrapper(OverdueFine.formatPesos(est));
+        });
+
+        table.getColumns().addAll(titleCol, borrowerCol, loanCol, dueCol, estFineCol);
 
         Label titleLabel = new Label("Return a book");
         titleLabel.setStyle(ViewStyles.TITLE_STYLE);

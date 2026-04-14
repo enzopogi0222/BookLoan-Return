@@ -1,8 +1,11 @@
 package com.mycompany.bookloanandreturn.View;
 
+import java.util.List;
+
 import com.mycompany.bookloanandreturn.Models.LoanTransaction;
 import com.mycompany.bookloanandreturn.View.common.ViewStyles;
-import java.util.List;
+import com.mycompany.bookloanandreturn.util.OverdueFine;
+
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -62,6 +65,24 @@ public class TransactionsView {
         TableColumn<LoanTransaction, String> statusCol = new TableColumn<>("Status");
         statusCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().getStatus()));
 
+        TableColumn<LoanTransaction, String> fineCol = new TableColumn<>("Fine");
+        fineCol.setCellValueFactory(data -> {
+            LoanTransaction t = data.getValue();
+            if ("Active".equals(t.getStatus())) {
+                return new ReadOnlyStringWrapper("—");
+            }
+            return new ReadOnlyStringWrapper(OverdueFine.formatPesos(t.getFinePesos()));
+        });
+
+        TableColumn<LoanTransaction, String> paidCol = new TableColumn<>("Paid");
+        paidCol.setCellValueFactory(data -> {
+            LoanTransaction t = data.getValue();
+            if ("Active".equals(t.getStatus()) || t.getFinePesos() == 0) {
+                return new ReadOnlyStringWrapper("—");
+            }
+            return new ReadOnlyStringWrapper(t.isFinePaid() ? "Yes" : "No");
+        });
+
         TableColumn<LoanTransaction, String> notesCol = new TableColumn<>("Notes");
         notesCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(
                 data.getValue().getNotes() != null ? data.getValue().getNotes() : ""));
@@ -73,6 +94,8 @@ public class TransactionsView {
         table.getColumns().add(dueCol);
         table.getColumns().add(retCol);
         table.getColumns().add(statusCol);
+        table.getColumns().add(fineCol);
+        table.getColumns().add(paidCol);
         table.getColumns().add(notesCol);
 
         Label titleLabel = new Label("Transactions");

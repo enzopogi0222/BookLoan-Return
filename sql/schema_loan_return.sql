@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS book_return (
   return_id INT AUTO_INCREMENT PRIMARY KEY,
   loan_id INT NOT NULL,
   return_date DATE NOT NULL,
+  fine_pesos INT NOT NULL DEFAULT 0,
   notes VARCHAR(500) NULL,
   CONSTRAINT fk_book_return_loan FOREIGN KEY (loan_id) REFERENCES loan(loan_id)
     ON DELETE RESTRICT

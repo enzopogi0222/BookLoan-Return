@@ -51,8 +51,14 @@ public class LoanBookView {
         ViewStyles.styleInput(borrowerField);
         borrowerField.setPrefWidth(420);
 
-        loanDatePicker = new DatePicker(LocalDate.now());
-        dueDatePicker = new DatePicker(LocalDate.now().plusWeeks(2));
+        LocalDate today = LocalDate.now();
+        loanDatePicker = new DatePicker(today);
+        dueDatePicker = new DatePicker(today.plusDays(3));
+        loanDatePicker.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                dueDatePicker.setValue(newVal.plusDays(3));
+            }
+        });
         styleDatePicker(loanDatePicker);
         styleDatePicker(dueDatePicker);
 

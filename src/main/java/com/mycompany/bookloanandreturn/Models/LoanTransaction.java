@@ -10,6 +10,10 @@ public class LoanTransaction {
     private String returnDate;
     private String status;
     private String notes;
+    /** Charged overdue fine in pesos when returned; 0 if on time or loan still active. */
+    private int finePesos;
+    /** Whether the fine has been paid (only applicable for returned books with fines). */
+    private boolean finePaid;
 
     public int getLoanId() {
         return loanId;
@@ -73,5 +77,21 @@ public class LoanTransaction {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public int getFinePesos() {
+        return finePesos;
+    }
+
+    public void setFinePesos(int finePesos) {
+        this.finePesos = finePesos;
+    }
+
+    public boolean isFinePaid() {
+        return finePaid;
+    }
+
+    public void setFinePaid(boolean finePaid) {
+        this.finePaid = finePaid;
     }
 }
