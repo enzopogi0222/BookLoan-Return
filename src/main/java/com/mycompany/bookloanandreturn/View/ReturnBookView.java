@@ -39,7 +39,6 @@ public class ReturnBookView {
 
     public ReturnBookView(Stage stage) {
         this.stage = stage;
-        stage.setTitle("Return Book");
         stage.setMinWidth(ViewStyles.SCENE_WIDTH);
         stage.setMinHeight(ViewStyles.SCENE_HEIGHT);
         stage.setResizable(true);

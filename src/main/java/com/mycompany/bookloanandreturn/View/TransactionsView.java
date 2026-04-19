@@ -33,7 +33,6 @@ public class TransactionsView {
 
     public TransactionsView(Stage stage) {
         this.stage = stage;
-        stage.setTitle("Transaction history");
         stage.setMinWidth(ViewStyles.SCENE_WIDTH);
         stage.setMinHeight(ViewStyles.SCENE_HEIGHT);
         stage.setResizable(true);

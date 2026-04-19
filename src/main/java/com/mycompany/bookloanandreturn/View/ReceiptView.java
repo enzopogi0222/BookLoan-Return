@@ -45,7 +45,6 @@ public class ReceiptView {
         dialog = new Stage();
         dialog.initModality(Modality.WINDOW_MODAL);
         dialog.initOwner(owner);
-        dialog.setTitle("Overdue Fine");
         dialog.setResizable(false);
 
         receiptContent = new VBox(8);

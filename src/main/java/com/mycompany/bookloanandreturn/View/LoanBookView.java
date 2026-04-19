@@ -34,7 +34,6 @@ public class LoanBookView {
 
     public LoanBookView(Stage stage) {
         this.stage = stage;
-        stage.setTitle("Loan Book");
         stage.setMinWidth(ViewStyles.SCENE_WIDTH);
         stage.setMinHeight(ViewStyles.SCENE_HEIGHT);
         stage.setResizable(true);
