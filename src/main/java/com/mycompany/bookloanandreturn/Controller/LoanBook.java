@@ -25,8 +25,30 @@ public class LoanBook {
         });
         view.addRefreshListener(this::loadAvailableBooks);
         view.addLoanListener(this::confirmLoan);
+
+        // Real-time student lookup for convenience
+        view.setStudentIdListener(this::handleStudentIdChange);
+
         loadAvailableBooks();
         view.show();
+    }
+
+    private void handleStudentIdChange(String studentIdText) {
+        if (studentIdText.isEmpty()) {
+            view.setStudentDisplayName("");
+            return;
+        }
+        try {
+            long studentId = Long.parseLong(studentIdText);
+            String name = getStudentName(studentId);
+            if (name.startsWith("Student #")) { // Not found in DB, getStudentName returns default
+                view.setStudentDisplayName("ID not found");
+            } else {
+                view.setStudentDisplayName(name);
+            }
+        } catch (NumberFormatException e) {
+            view.setStudentDisplayName("Invalid ID format");
+        }
     }
 
     private void loadAvailableBooks() {
@@ -70,9 +92,10 @@ public class LoanBook {
             return;
         }
 
-        // Verify student ID exists
-        if (!studentExists(studentId)) {
-            view.showError("Student ID not found.");
+        // Verify student exists and get their name
+        String studentName = getStudentName(studentId);
+        if (studentName.startsWith("Student #") && !studentExists(studentId)) {
+            view.showError("Student ID not found. Please register the student first.");
             return;
         }
 
@@ -100,6 +123,8 @@ public class LoanBook {
             return;
         }
 
+        // Normalization: In a truly normalized DB, we don't store 'borrower_name' in the loan table
+        // if we have a student table. However, to maintain compatibility with your existing schema:
         String insertLoan = "INSERT INTO loan (book_id, borrower_name, student_id, loan_date, due_date) VALUES (?, ?, ?, ?, ?)";
         String decStock = "UPDATE book SET stock = stock - 1 WHERE book_id = ? AND stock > 0";
 
@@ -108,7 +133,7 @@ public class LoanBook {
             try (PreparedStatement ins = conn.prepareStatement(insertLoan);
                  PreparedStatement upd = conn.prepareStatement(decStock)) {
                 ins.setInt(1, choice.bookId());
-                ins.setString(2, "Student #" + studentId);
+                ins.setString(2, studentName); // Use real name instead of "Student #ID"
                 ins.setLong(3, studentId);
                 ins.setDate(4, Date.valueOf(loanDate));
                 ins.setDate(5, Date.valueOf(dueDate));
@@ -121,9 +146,8 @@ public class LoanBook {
                     return;
                 }
                 conn.commit();
-                String studentName = getStudentName(studentId);
-                String successMsg = String.format("Loan recorded for %s (Student #%d). Book: '%s'. Stock updated.",
-                        studentName, studentId, choice.title());
+                String successMsg = String.format("Loan recorded for %s. Book: '%s'. Stock updated.",
+                        studentName, choice.title());
                 view.showSuccess(successMsg);
                 loadAvailableBooks();
             } catch (SQLException ex) {
@@ -164,7 +188,6 @@ public class LoanBook {
                 }
             }
         } catch (SQLException ex) {
-            // Log error but allow loan attempt (will fail if DB issue)
             System.err.println("Error counting active loans: " + ex.getMessage());
         }
         return 0;
@@ -179,7 +202,6 @@ public class LoanBook {
                 return rs.next();
             }
         } catch (SQLException ex) {
-            // Log error but treat as not found (fail safe)
             System.err.println("Error checking student exists: " + ex.getMessage());
         }
         return false;
@@ -200,7 +222,6 @@ public class LoanBook {
                 return rs.next();
             }
         } catch (SQLException ex) {
-            // Log error but treat as false to allow loan attempt
             System.err.println("Error checking active loan for book: " + ex.getMessage());
         }
         return false;

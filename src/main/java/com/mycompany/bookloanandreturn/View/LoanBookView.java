@@ -2,6 +2,7 @@ package com.mycompany.bookloanandreturn.View;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.function.Consumer;
 
 import com.mycompany.bookloanandreturn.Models.AvailableBook;
 import com.mycompany.bookloanandreturn.View.common.ViewStyles;
@@ -26,11 +27,13 @@ public class LoanBookView {
     private final Scene scene;
     private final ComboBox<AvailableBook> bookCombo;
     private final TextField borrowerField;
+    private final Label studentNameLabel;
     private final DatePicker loanDatePicker;
     private final DatePicker dueDatePicker;
     private Runnable loanListener;
     private Runnable backListener;
     private Runnable refreshListener;
+    private Consumer<String> studentIdListener;
 
     public LoanBookView(Stage stage) {
         this.stage = stage;
@@ -48,9 +51,19 @@ public class LoanBookView {
         bookCombo.setPrefWidth(420);
 
         borrowerField = new TextField();
-        borrowerField.setPromptText("Student ID");
+        borrowerField.setPromptText("Enter Student ID");
         ViewStyles.styleInput(borrowerField);
         borrowerField.setPrefWidth(420);
+
+        // Listener for real-time lookup
+        borrowerField.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (studentIdListener != null) {
+                studentIdListener.accept(newVal.trim());
+            }
+        });
+
+        studentNameLabel = new Label("");
+        studentNameLabel.setStyle("-fx-text-fill: #666; -fx-font-style: italic;");
 
         LocalDate today = LocalDate.now();
         loanDatePicker = new DatePicker(today);
@@ -68,8 +81,9 @@ public class LoanBookView {
         grid.setVgap(12);
         addRow(grid, 0, "Book:", bookCombo);
         addRow(grid, 1, "Student ID:", borrowerField);
-        addRow(grid, 2, "Loan date:", loanDatePicker);
-        addRow(grid, 3, "Due date:", dueDatePicker);
+        addRow(grid, 2, "", studentNameLabel); // Row for dynamic name
+        addRow(grid, 3, "Loan date:", loanDatePicker);
+        addRow(grid, 4, "Due date:", dueDatePicker);
 
         Button loanButton = new Button("Confirm loan");
         ViewStyles.stylePrimaryButton(loanButton, font);
@@ -132,6 +146,10 @@ public class LoanBookView {
         }
     }
 
+    public void setStudentDisplayName(String name) {
+        studentNameLabel.setText(name != null ? "Borrower: " + name : "");
+    }
+
     public AvailableBook getSelectedBook() {
         return bookCombo.getSelectionModel().getSelectedItem();
     }
@@ -158,6 +176,10 @@ public class LoanBookView {
 
     public void addRefreshListener(Runnable listener) {
         this.refreshListener = listener;
+    }
+
+    public void setStudentIdListener(Consumer<String> listener) {
+        this.studentIdListener = listener;
     }
 
     public Stage getStage() {
