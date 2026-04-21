@@ -25,10 +25,9 @@ public class LoanBook {
         });
         view.addRefreshListener(this::loadAvailableBooks);
         view.addLoanListener(this::confirmLoan);
-
-        // Real-time student lookup for convenience
+        
         view.setStudentIdListener(this::handleStudentIdChange);
-
+        
         loadAvailableBooks();
         view.show();
     }
@@ -41,7 +40,7 @@ public class LoanBook {
         try {
             long studentId = Long.parseLong(studentIdText);
             String name = getStudentName(studentId);
-            if (name.startsWith("Student #")) { // Not found in DB, getStudentName returns default
+            if (name.startsWith("Student #")) {
                 view.setStudentDisplayName("ID not found");
             } else {
                 view.setStudentDisplayName(name);
@@ -66,7 +65,7 @@ public class LoanBook {
             }
             view.setAvailableBooks(list);
             if (list.isEmpty()) {
-                view.showError("No books with available stock. Add books or return copies first.");
+                view.showError("No books with available stock.");
             }
         } catch (SQLException ex) {
             view.showError(dbMessage(ex));
@@ -74,11 +73,18 @@ public class LoanBook {
     }
 
     private void confirmLoan() {
-        AvailableBook choice = view.getSelectedBook();
-        if (choice == null) {
-            view.showError("Please select a book.");
+        List<AvailableBook> selectedBooks = view.getSelectedBooks();
+        if (selectedBooks.isEmpty()) {
+            view.showError("Please select at least one book.");
             return;
         }
+
+        long uniqueCount = selectedBooks.stream().map(AvailableBook::bookId).distinct().count();
+        if (uniqueCount < selectedBooks.size()) {
+            view.showError("Duplicate books selected. Please choose different books.");
+            return;
+        }
+
         String studentIdText = view.getBorrowerName().trim();
         if (studentIdText.isEmpty()) {
             view.showError("Student ID is required.");
@@ -92,23 +98,16 @@ public class LoanBook {
             return;
         }
 
-        // Verify student exists and get their name
         String studentName = getStudentName(studentId);
         if (studentName.startsWith("Student #") && !studentExists(studentId)) {
-            view.showError("Student ID not found. Please register the student first.");
-            return;
-        }
-
-        // Check if student already has this book borrowed and not returned
-        if (hasActiveLoanForBook(studentId, choice.bookId())) {
-            view.showError("Student already has this book on loan. Return it first before borrowing again.");
+            view.showError("Student ID not found.");
             return;
         }
 
         LocalDate loanDate = view.getLoanDate();
         LocalDate dueDate = view.getDueDate();
         if (loanDate == null || dueDate == null) {
-            view.showError("Please set both loan date and due date.");
+            view.showError("Please set both dates.");
             return;
         }
         if (dueDate.isBefore(loanDate)) {
@@ -116,15 +115,20 @@ public class LoanBook {
             return;
         }
 
-        // Check student's active loan count (max 3 books allowed)
         int activeLoans = countActiveLoansForStudent(studentId);
-        if (activeLoans >= 3) {
-            view.showError("Student has already borrowed the maximum of 3 books. Return a book before borrowing another.");
+        if (activeLoans + selectedBooks.size() > 3) {
+            view.showError(String.format("Student has %d active loans. They can only borrow %d more book(s).", 
+                activeLoans, 3 - activeLoans));
             return;
         }
 
-        // Normalization: In a truly normalized DB, we don't store 'borrower_name' in the loan table
-        // if we have a student table. However, to maintain compatibility with your existing schema:
+        for (AvailableBook book : selectedBooks) {
+            if (hasActiveLoanForBook(studentId, book.bookId())) {
+                view.showError("Student already has '" + book.title() + "' on loan. Return it first.");
+                return;
+            }
+        }
+
         String insertLoan = "INSERT INTO loan (book_id, borrower_name, student_id, loan_date, due_date) VALUES (?, ?, ?, ?, ?)";
         String decStock = "UPDATE book SET stock = stock - 1 WHERE book_id = ? AND stock > 0";
 
@@ -132,23 +136,32 @@ public class LoanBook {
             conn.setAutoCommit(false);
             try (PreparedStatement ins = conn.prepareStatement(insertLoan);
                  PreparedStatement upd = conn.prepareStatement(decStock)) {
-                ins.setInt(1, choice.bookId());
-                ins.setString(2, studentName); // Use real name instead of "Student #ID"
-                ins.setLong(3, studentId);
-                ins.setDate(4, Date.valueOf(loanDate));
-                ins.setDate(5, Date.valueOf(dueDate));
-                ins.executeUpdate();
-                upd.setInt(1, choice.bookId());
-                int n = upd.executeUpdate();
-                if (n != 1) {
-                    conn.rollback();
-                    view.showError("Could not update stock (book may be out of stock).");
-                    return;
+                
+                for (AvailableBook book : selectedBooks) {
+                    ins.setInt(1, book.bookId());
+                    ins.setString(2, studentName);
+                    ins.setLong(3, studentId);
+                    ins.setDate(4, Date.valueOf(loanDate));
+                    ins.setDate(5, Date.valueOf(dueDate));
+                    ins.addBatch();
+
+                    upd.setInt(1, book.bookId());
+                    upd.addBatch();
                 }
+
+                ins.executeBatch();
+                int[] results = upd.executeBatch();
+                
+                for (int res : results) {
+                    if (res == 0) {
+                        conn.rollback();
+                        view.showError("One or more books are no longer in stock.");
+                        return;
+                    }
+                }
+
                 conn.commit();
-                String successMsg = String.format("Loan recorded for %s. Book: '%s'. Stock updated.",
-                        studentName, choice.title());
-                view.showSuccess(successMsg);
+                view.showSuccess(String.format("Successfully loaned %d book(s) to %s.", selectedBooks.size(), studentName));
                 loadAvailableBooks();
             } catch (SQLException ex) {
                 conn.rollback();
@@ -164,10 +177,7 @@ public class LoanBook {
     private static String dbMessage(SQLException ex) {
         String msg = ex.getMessage();
         if (msg != null && (msg.contains("doesn't exist") || msg.contains("Unknown table"))) {
-            return "Loan tables are missing. Run sql/schema_loan_return.sql on database bookloan_and_return.";
-        }
-        if (msg != null && msg.contains("student_id")) {
-            return "Database needs the student_id column. Run sql/migration_add_student_id_to_loan.sql on bookloan_and_return.";
+            return "Database tables are missing.";
         }
         return "Database error: " + (msg != null ? msg : ex.getClass().getSimpleName());
     }
@@ -202,7 +212,7 @@ public class LoanBook {
                 return rs.next();
             }
         } catch (SQLException ex) {
-            System.err.println("Error checking student exists: " + ex.getMessage());
+            System.err.println("Error checking student: " + ex.getMessage());
         }
         return false;
     }
@@ -222,7 +232,7 @@ public class LoanBook {
                 return rs.next();
             }
         } catch (SQLException ex) {
-            System.err.println("Error checking active loan for book: " + ex.getMessage());
+            System.err.println("Error checking active loan: " + ex.getMessage());
         }
         return false;
     }
