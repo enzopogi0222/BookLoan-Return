@@ -2,6 +2,7 @@ package com.mycompany.bookloanandreturn.View;
 
 import java.time.format.DateTimeFormatter;
 
+import com.mycompany.bookloanandreturn.Models.MultiReceiptData;
 import com.mycompany.bookloanandreturn.Models.ReceiptData;
 import com.mycompany.bookloanandreturn.View.common.ViewStyles;
 import com.mycompany.bookloanandreturn.util.OverdueFine;
@@ -34,7 +35,7 @@ public class ReceiptView {
         dialog = new Stage();
         dialog.initModality(Modality.WINDOW_MODAL);
         dialog.initOwner(owner);
-        dialog.setTitle("Fine Payment Receipt");
+        dialog.setTitle("Overdue Fine");
         dialog.setResizable(false);
 
         receiptContent = new VBox(8);
@@ -45,6 +46,12 @@ public class ReceiptView {
 
         Scene scene = new Scene(receiptContent);
         dialog.setScene(scene);
+
+        dialog.setOnCloseRequest(e -> {
+            System.out.println("[DEBUG] X button or Alt+F4 pressed - NOT paying fine");
+            paid = false;
+            System.out.println("[DEBUG] paid flag set to false in setOnCloseRequest");
+        });
     }
 
     public void displayReceipt(ReceiptData data) {
@@ -97,7 +104,7 @@ public class ReceiptView {
         Label daysLateLabel = new Label(String.format("Days Late: %d", data.getDaysLate()));
         daysLateLabel.setFont(Font.font("Segoe UI", 12));
 
-        Label fineLabel = new Label("TOTAL FINE PAID: " + OverdueFine.formatPesos(data.getFineAmount()));
+        Label fineLabel = new Label("TOTAL FINE DUE: " + OverdueFine.formatPesos(data.getFineAmount()));
         fineLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 16));
         fineLabel.setStyle("-fx-text-fill: " + ViewStyles.BRAND_BLUE + ";");
 
@@ -119,26 +126,107 @@ public class ReceiptView {
         }
     }
 
+    public void displayMultiReceipt(MultiReceiptData data) {
+        receiptContent.getChildren().clear();
+
+        ImageView logo = new ImageView(ViewStyles.loadBrandLogo());
+        logo.setFitHeight(60);
+        logo.setFitWidth(60);
+        logo.setPreserveRatio(true);
+
+        Label institutionLabel = new Label("RMMC Library");
+        institutionLabel.setStyle(ViewStyles.INSTITUTION_STYLE);
+        institutionLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+
+        Label titleLabel = new Label("RECEIPT");
+        titleLabel.setStyle(ViewStyles.TITLE_STYLE);
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 22));
+
+        HBox headerBox = new HBox(15, logo, new VBox(4, institutionLabel, titleLabel));
+        headerBox.setAlignment(Pos.CENTER_LEFT);
+
+        Separator separator1 = new Separator();
+
+        int receiptNo = !data.getItems().isEmpty() ? data.getItems().get(0).returnId : 0;
+        Label receiptInfo = new Label(String.format("Receipt #: R-%d\nDate: %s",
+                receiptNo,
+                data.getReturnDate() != null ? data.getReturnDate().format(DATE_FORMAT) : "—"));
+        receiptInfo.setFont(Font.font("Segoe UI", 12));
+
+        Label borrowerLabel = new Label("Borrower: " + (data.getBorrowerName() != null ? data.getBorrowerName() : "—"));
+        borrowerLabel.setFont(Font.font("Segoe UI", 13));
+
+        Separator separator2 = new Separator();
+
+        VBox itemsBox = new VBox(6);
+        itemsBox.setPadding(new Insets(6, 0, 6, 0));
+        for (MultiReceiptData.ReceiptItem item : data.getItems()) {
+            Label line = new Label(String.format("%s  •  %d day(s) late  •  %s",
+                    item.bookTitle != null ? item.bookTitle : "—",
+                    item.daysLate,
+                    OverdueFine.formatPesos(item.fineAmount)));
+            line.setFont(Font.font("Segoe UI", 12));
+            itemsBox.getChildren().add(line);
+        }
+
+        Separator separator3 = new Separator();
+
+        VBox totalBox = new VBox(4);
+        totalBox.setAlignment(Pos.CENTER_RIGHT);
+
+        Label countLabel = new Label("Items: " + data.getItemCount());
+        countLabel.setFont(Font.font("Segoe UI", 12));
+
+        Label totalLabel = new Label("TOTAL FINE DUE: " + OverdueFine.formatPesos(data.getTotalFine()));
+        totalLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 16));
+        totalLabel.setStyle("-fx-text-fill: " + ViewStyles.BRAND_BLUE + ";");
+
+        totalBox.getChildren().addAll(countLabel, totalLabel);
+
+        boolean hasFine = data.getTotalFine() > 0;
+        if (data.getNotes() != null && !data.getNotes().isEmpty()) {
+            Separator separator4 = new Separator();
+            Label notesLabel = new Label("Notes: " + data.getNotes());
+            notesLabel.setFont(Font.font("Segoe UI", 11));
+            notesLabel.setStyle("-fx-text-fill: #666;");
+            receiptContent.getChildren().addAll(headerBox, separator1, receiptInfo, borrowerLabel,
+                    separator2, itemsBox,
+                    separator3, totalBox, separator4, notesLabel, createButtonBox(hasFine));
+        } else {
+            receiptContent.getChildren().addAll(headerBox, separator1, receiptInfo, borrowerLabel,
+                    separator2, itemsBox,
+                    separator3, totalBox, createButtonBox(hasFine));
+        }
+    }
+
     private HBox createButtonBox(boolean hasFine) {
         HBox buttonBox = new HBox(10);
         buttonBox.setAlignment(Pos.CENTER_RIGHT);
         buttonBox.setPadding(new Insets(15, 0, 0, 0));
 
         Button closeButton = new Button("Close");
-        closeButton.setOnAction(e -> dialog.close());
+        closeButton.setOnAction(e -> {
+            System.out.println("[DEBUG] Close button clicked - NOT paying fine");
+            paid = false;
+            dialog.close();
+        });
         closeButton.setPrefHeight(36);
+        closeButton.setDefaultButton(false);
 
         if (hasFine) {
             Button payButton = new Button("Pay Fine");
             ViewStyles.stylePrimaryButton(payButton);
+            payButton.setDefaultButton(false);
             payButton.setOnAction(e -> {
                 paid = true;
+                System.out.println("[DEBUG] Pay Fine button clicked - executing payListener");
                 if (payListener != null) payListener.run();
                 dialog.close();
             });
 
             Button printButton = new Button("Print Receipt");
             ViewStyles.stylePrimaryButton(printButton);
+            printButton.setDefaultButton(false);
             printButton.setOnAction(e -> printReceipt());
 
             buttonBox.getChildren().addAll(closeButton, printButton, payButton);
@@ -154,6 +242,7 @@ public class ReceiptView {
     }
 
     public boolean isPaid() {
+        System.out.println("[DEBUG] isPaid() called, returning: " + paid);
         return paid;
     }
 
@@ -175,6 +264,8 @@ public class ReceiptView {
     }
 
     public void show() {
+        System.out.println("[DEBUG] ReceiptView.show() called - about to show dialog");
         dialog.showAndWait();
+        System.out.println("[DEBUG] ReceiptView.show() returned - paid=" + paid);
     }
 }

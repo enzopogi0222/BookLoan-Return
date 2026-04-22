@@ -208,6 +208,10 @@ public class ReturnBookView {
         ViewStyles.showInfoAlert("Success", message);
     }
 
+    public void showInfo(String message) {
+        ViewStyles.showInfoAlert("Information", message);
+    }
+
     private void fireBackRequested() {
         if (backListener != null) backListener.run();
     }
