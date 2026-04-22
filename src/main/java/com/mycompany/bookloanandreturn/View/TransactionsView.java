@@ -1,5 +1,6 @@
 package com.mycompany.bookloanandreturn.View;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import com.mycompany.bookloanandreturn.Models.LoanTransaction;
@@ -11,6 +12,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -27,6 +29,8 @@ public class TransactionsView {
     private final Scene scene;
     private final TableView<LoanTransaction> table;
     private final TextField searchField;
+    private final DatePicker fromDatePicker;
+    private final DatePicker toDatePicker;
     private Runnable refreshListener;
     private Runnable filterListener;
     private Runnable backListener;
@@ -117,17 +121,40 @@ public class TransactionsView {
         Label titleLabel = new Label("Transactions");
         titleLabel.setStyle(ViewStyles.TITLE_STYLE);
 
+        // Search Bar
         Label searchLabel = new Label("Search:");
         searchLabel.setStyle(ViewStyles.LABEL_STYLE);
         searchField = new TextField();
-        searchField.setPromptText("Filter by book, borrower, dates, status, or notes");
+        searchField.setPromptText("Filter by book, borrower, status...");
         ViewStyles.styleInput(searchField);
-        searchField.setPrefWidth(400);
+        searchField.setPrefWidth(250);
         searchField.textProperty().addListener((obs, o, n) -> fireFilterRequested());
 
-        HBox searchRow = new HBox(10, searchLabel, searchField);
-        searchRow.setAlignment(Pos.CENTER_LEFT);
-        HBox.setHgrow(searchField, Priority.ALWAYS);
+        // Date Range Filters
+        Label fromLabel = new Label("From:");
+        fromLabel.setStyle(ViewStyles.LABEL_STYLE);
+        fromDatePicker = new DatePicker();
+        fromDatePicker.setPromptText("Start Date");
+        fromDatePicker.setPrefWidth(140);
+        fromDatePicker.valueProperty().addListener((obs, o, n) -> fireFilterRequested());
+
+        Label toLabel = new Label("To:");
+        toLabel.setStyle(ViewStyles.LABEL_STYLE);
+        toDatePicker = new DatePicker();
+        toDatePicker.setPromptText("End Date");
+        toDatePicker.setPrefWidth(140);
+        toDatePicker.valueProperty().addListener((obs, o, n) -> fireFilterRequested());
+
+        Button clearDateBtn = new Button("Clear Range");
+        clearDateBtn.setStyle("-fx-font-size: 11px;");
+        clearDateBtn.setOnAction(e -> {
+            fromDatePicker.setValue(null);
+            toDatePicker.setValue(null);
+        });
+
+        HBox filterRow = new HBox(12, searchLabel, searchField, fromLabel, fromDatePicker, toLabel, toDatePicker, clearDateBtn);
+        filterRow.setAlignment(Pos.CENTER_LEFT);
+        filterRow.setPadding(new Insets(5, 0, 5, 0));
 
         Button refreshButton = new Button("Refresh");
         ViewStyles.stylePrimaryButton(refreshButton);
@@ -143,7 +170,7 @@ public class TransactionsView {
         bottom.setAlignment(Pos.CENTER_RIGHT);
 
         BorderPane main = new BorderPane();
-        main.setTop(new VBox(12, titleLabel, searchRow));
+        main.setTop(new VBox(12, titleLabel, filterRow));
         main.setCenter(table);
         main.setBottom(bottom);
         main.setPadding(new Insets(20));
@@ -174,6 +201,14 @@ public class TransactionsView {
 
     public String getSearchText() {
         return searchField.getText().trim().toLowerCase();
+    }
+
+    public LocalDate getFromDate() {
+        return fromDatePicker.getValue();
+    }
+
+    public LocalDate getToDate() {
+        return toDatePicker.getValue();
     }
 
     public void displayTransactions(List<LoanTransaction> rows) {

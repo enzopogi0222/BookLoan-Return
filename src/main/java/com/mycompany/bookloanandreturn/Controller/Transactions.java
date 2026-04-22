@@ -5,6 +5,7 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -96,17 +97,35 @@ public class Transactions implements Runnable {
 
     private void applyFilter() {
         String q = view.getSearchText();
-        if (q.isEmpty()) {
-            view.displayTransactions(allRows);
-            return;
-        }
+        LocalDate from = view.getFromDate();
+        LocalDate to = view.getToDate();
+
         List<LoanTransaction> filtered = new ArrayList<>();
         for (LoanTransaction t : allRows) {
-            if (matches(t, q)) {
+            boolean textMatch = q.isEmpty() || matches(t, q);
+            boolean dateMatch = matchesDateRange(t, from, to);
+
+            if (textMatch && dateMatch) {
                 filtered.add(t);
             }
         }
         view.displayTransactions(filtered);
+    }
+
+    private boolean matchesDateRange(LoanTransaction t, LocalDate from, LocalDate to) {
+        if (from == null && to == null) return true;
+        
+        // We filter based on the loan_date
+        if (t.getLoanDate() == null || t.getLoanDate().isEmpty()) return false;
+        
+        try {
+            LocalDate loanDate = LocalDate.parse(t.getLoanDate());
+            if (from != null && loanDate.isBefore(from)) return false;
+            if (to != null && loanDate.isAfter(to)) return false;
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private static boolean matches(LoanTransaction t, String q) {
