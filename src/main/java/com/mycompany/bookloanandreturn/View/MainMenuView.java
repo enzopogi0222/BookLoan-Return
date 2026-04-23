@@ -26,6 +26,7 @@ public class MainMenuView {
     private final Button loanBookButton;
     private final Button returnBookButton;
     private final Button transactionsButton;
+    private final Button reportsButton;
     private Label activeLoansValue;
     private Label returnedTodayValue;
     private Label unpaidFinesValue;
@@ -76,7 +77,11 @@ public class MainMenuView {
         ViewStyles.stylePrimaryButton(transactionsButton, font);
         transactionsButton.setPrefWidth(200);
 
-        HBox buttonRow = new HBox(12, loanBookButton, returnBookButton, transactionsButton);
+        reportsButton = new Button("Reports");
+        ViewStyles.stylePrimaryButton(reportsButton, font);
+        reportsButton.setPrefWidth(200);
+
+        HBox buttonRow = new HBox(12, loanBookButton, returnBookButton, transactionsButton, reportsButton);
         buttonRow.setAlignment(Pos.CENTER);
 
         // Main layout
@@ -193,6 +198,10 @@ public class MainMenuView {
 
     public void addTransactionsListener(Runnable listener) {
         transactionsButton.setOnAction(e -> listener.run());
+    }
+
+    public void addReportsListener(Runnable listener) {
+        reportsButton.setOnAction(e -> listener.run());
     }
 
     public void show() {

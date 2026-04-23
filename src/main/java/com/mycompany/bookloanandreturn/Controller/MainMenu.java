@@ -23,6 +23,7 @@ public class MainMenu {
         view.addLoanBookListener(this::openLoanBook);
         view.addReturnBookListener(this::openReturnBook);
         view.addTransactionsListener(this::openTransactions);
+        view.addReportsListener(this::openReports);
 
         // Create auto-refresh timer (refresh every 5 seconds)
         refreshTimer = new Timeline(new KeyFrame(Duration.seconds(5), e -> loadStatistics()));
@@ -140,6 +141,15 @@ public class MainMenu {
     private void openTransactions() {
         refreshTimer.pause();
         new Transactions(view.getStage(), () -> {
+            view.show();
+            loadStatistics();
+            refreshTimer.play();
+        });
+    }
+
+    private void openReports() {
+        refreshTimer.pause();
+        new Reports(view.getStage(), () -> {
             view.show();
             loadStatistics();
             refreshTimer.play();
