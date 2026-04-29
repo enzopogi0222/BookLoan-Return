@@ -18,6 +18,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
@@ -116,6 +117,7 @@ public class ReportsView {
 
     public void setupOverdueBooksColumns() {
         table.getColumns().clear();
+        table.getItems().clear();
 
         TableColumn<Object, String> idCol = new TableColumn<>("Loan no:");
         idCol.setCellValueFactory(data -> {
@@ -179,6 +181,7 @@ public class ReportsView {
 
     public void setupMonthlyStatsColumns() {
         table.getColumns().clear();
+        table.getItems().clear();
 
         TableColumn<Object, String> periodCol = new TableColumn<>("Period");
         periodCol.setCellValueFactory(data -> {
@@ -215,6 +218,7 @@ public class ReportsView {
 
     public void setupFineCollectionColumns() {
         table.getColumns().clear();
+        table.getItems().clear();
 
         TableColumn<Object, String> idCol = new TableColumn<>("Loan no:");
         idCol.setCellValueFactory(data -> {
@@ -252,11 +256,27 @@ public class ReportsView {
             return new ReadOnlyStringWrapper(r.getPaymentStatus());
         });
 
-        table.getColumns().addAll(idCol, bookCol, borrowerCol, returnDateCol, fineCol, statusCol);
+        TableColumn<Object, String> paidCol = new TableColumn<>("Paid");
+        paidCol.setCellValueFactory(data -> {
+            FineCollectionReport r = (FineCollectionReport) data.getValue();
+            return new ReadOnlyStringWrapper(OverdueFine.formatPesos(r.getAmountPaid()));
+        });
+
+        TableColumn<Object, String> remainingCol = new TableColumn<>("Remaining");
+        remainingCol.setCellValueFactory(data -> {
+            FineCollectionReport r = (FineCollectionReport) data.getValue();
+            return new ReadOnlyStringWrapper(OverdueFine.formatPesos(r.getRemainingBalance()));
+        });
+
+        table.getColumns().addAll(idCol, bookCol, borrowerCol, returnDateCol, fineCol, statusCol, paidCol, remainingCol);
     }
 
     public void displayData(List<?> data) {
         table.getItems().setAll(data);
+    }
+
+    public Object getSelectedItem() {
+        return table.getSelectionModel().getSelectedItem();
     }
 
     public void setSummary(String summary) {
@@ -299,6 +319,10 @@ public class ReportsView {
         ViewStyles.showInfoAlert(title, message);
     }
 
+    public void showSuccess(String message) {
+        ViewStyles.showInfoAlert("Success", message);
+    }
+
     private void fireBackRequested() {
         if (backListener != null) backListener.run();
     }
@@ -310,4 +334,5 @@ public class ReportsView {
     private void fireRefreshRequested() {
         if (refreshListener != null) refreshListener.run();
     }
+
 }
