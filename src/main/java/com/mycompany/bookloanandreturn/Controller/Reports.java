@@ -17,6 +17,7 @@ import com.mycompany.bookloanandreturn.Models.MonthlyStatistics;
 import com.mycompany.bookloanandreturn.Models.OverdueBookReport;
 import com.mycompany.bookloanandreturn.View.ReportsView;
 import com.mycompany.bookloanandreturn.util.ExcelExport;
+import com.mycompany.bookloanandreturn.util.OverdueFine;
 
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -172,7 +173,7 @@ public class Reports {
 
         String sql = """
             SELECT l.loan_id, b.bookName, l.borrower_name, r.return_date,
-                   r.fine_pesos, r.fine_paid
+                   r.fine_pesos, r.amount_paid, r.fine_paid
             FROM book_return r
             INNER JOIN loan l ON l.loan_id = r.loan_id
             INNER JOIN book b ON b.book_id = l.book_id
@@ -191,23 +192,54 @@ public class Reports {
                 r.setBorrowerName(rs.getString("borrower_name"));
                 r.setReturnDate(rs.getDate("return_date").toLocalDate().toString());
                 r.setFineAmount(rs.getInt("fine_pesos"));
+                r.setAmountPaid(rs.getInt("amount_paid"));
                 r.setFinePaid(rs.getBoolean("fine_paid"));
-                r.setPaymentStatus(r.isFinePaid() ? "Paid" : "Unpaid");
+                
+                if (r.isFinePaid()) {
+                    r.setPaymentStatus("Paid");
+                } else if (r.getAmountPaid() > 0) {
+                    r.setPaymentStatus("Partial");
+                } else {
+                    r.setPaymentStatus("Unpaid");
+                }
                 currentFineData.add(r);
             }
 
             view.displayData(currentFineData);
 
             long paidCount = currentFineData.stream().filter(FineCollectionReport::isFinePaid).count();
-            int totalFines = currentFineData.stream().mapToInt(FineCollectionReport::getFineAmount).sum();
             int paidFines = currentFineData.stream()
                 .filter(FineCollectionReport::isFinePaid)
                 .mapToInt(FineCollectionReport::getFineAmount)
                 .sum();
 
-            view.setSummary(String.format("Total fines: %d | Paid: %d (\u20B1%d) | Unpaid: %d (\u20B1%d)",
-                currentFineData.size(), paidCount, paidFines,
-                currentFineData.size() - paidCount, totalFines - paidFines));
+            int partialCount = (int) currentFineData.stream()
+                .filter(r -> !r.isFinePaid() && r.getAmountPaid() > 0)
+                .count();
+            int partialPaid = currentFineData.stream()
+                .filter(r -> !r.isFinePaid() && r.getAmountPaid() > 0)
+                .mapToInt(FineCollectionReport::getAmountPaid)
+                .sum();
+            int partialRemaining = currentFineData.stream()
+                .filter(r -> !r.isFinePaid() && r.getAmountPaid() > 0)
+                .mapToInt(FineCollectionReport::getRemainingBalance)
+                .sum();
+
+            int unpaidCount = (int) currentFineData.stream()
+                .filter(r -> !r.isFinePaid() && r.getAmountPaid() == 0)
+                .count();
+            int unpaidFines = currentFineData.stream()
+                .filter(r -> !r.isFinePaid() && r.getAmountPaid() == 0)
+                .mapToInt(FineCollectionReport::getRemainingBalance)
+                .sum();
+
+            int totalCollected = paidFines + partialPaid;
+            int totalOutstanding = partialRemaining + unpaidFines;
+
+            view.setSummary(String.format("Total: %d | Collected: \u20B1%d | Outstanding: \u20B1%d | Paid: %d | Partial: %d (\u20B1%d left) | Unpaid: %d (\u20B1%d)",
+                currentFineData.size(), totalCollected, totalOutstanding,
+                paidCount, partialCount, partialRemaining,
+                unpaidCount, unpaidFines));
 
         } catch (SQLException ex) {
             view.showError(dbMessage(ex));

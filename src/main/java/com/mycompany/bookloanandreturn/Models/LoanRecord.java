@@ -15,6 +15,12 @@ public class LoanRecord {
     private String dueDate;
     /** Parsed due date for fine calculation; may be null if not set. */
     private LocalDate dueDateValue;
+    /** Flag indicating this loan has been returned but has unpaid fine. */
+    private boolean hasUnpaidFine;
+    /** Remaining balance for unpaid fine. */
+    private int remainingBalance;
+    /** Return ID if book has been returned (for additional payments). */
+    private int returnId;
 
     public int getLoanId() {
         return loanId;
@@ -94,5 +100,29 @@ public class LoanRecord {
 
     public void setDueDateValue(LocalDate dueDateValue) {
         this.dueDateValue = dueDateValue;
+    }
+
+    public boolean isHasUnpaidFine() {
+        return hasUnpaidFine;
+    }
+
+    public void setHasUnpaidFine(boolean hasUnpaidFine) {
+        this.hasUnpaidFine = hasUnpaidFine;
+    }
+
+    public int getRemainingBalance() {
+        return remainingBalance;
+    }
+
+    public void setRemainingBalance(int remainingBalance) {
+        this.remainingBalance = remainingBalance;
+    }
+
+    public int getReturnId() {
+        return returnId;
+    }
+
+    public void setReturnId(int returnId) {
+        this.returnId = returnId;
     }
 }

@@ -6,6 +6,7 @@ public class FineCollectionReport {
     private String borrowerName;
     private String returnDate;
     private int fineAmount;
+    private int amountPaid;
     private boolean finePaid;
     private String paymentStatus;
 
@@ -19,6 +20,9 @@ public class FineCollectionReport {
     public void setReturnDate(String returnDate) { this.returnDate = returnDate; }
     public int getFineAmount() { return fineAmount; }
     public void setFineAmount(int fineAmount) { this.fineAmount = fineAmount; }
+    public int getAmountPaid() { return amountPaid; }
+    public void setAmountPaid(int amountPaid) { this.amountPaid = amountPaid; }
+    public int getRemainingBalance() { return fineAmount - amountPaid; }
     public boolean isFinePaid() { return finePaid; }
     public void setFinePaid(boolean finePaid) { this.finePaid = finePaid; }
     public String getPaymentStatus() { return paymentStatus; }

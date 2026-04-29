@@ -49,7 +49,7 @@ public class ReturnBookView {
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         table.setFixedCellSize(34);
         table.setStyle(ViewStyles.TABLE_STYLE);
-        table.setPlaceholder(new Label("No active loans"));
+        table.setPlaceholder(new Label("No active loans or unpaid fines"));
         table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
         TableColumn<LoanRecord, String> titleCol = new TableColumn<>("Book");
@@ -78,7 +78,11 @@ public class ReturnBookView {
 
         TableColumn<LoanRecord, String> estFineCol = new TableColumn<>("Fine if returned today");
         estFineCol.setCellValueFactory(data -> {
-            LocalDate due = data.getValue().getDueDateValue();
+            LoanRecord lr = data.getValue();
+            if (lr.isHasUnpaidFine()) {
+                return new ReadOnlyStringWrapper("₱" + lr.getRemainingBalance() + " (UNPAID)");
+            }
+            LocalDate due = lr.getDueDateValue();
             if (due == null) {
                 return new ReadOnlyStringWrapper("—");
             }
@@ -86,9 +90,18 @@ public class ReturnBookView {
             return new ReadOnlyStringWrapper(OverdueFine.formatPesos(est));
         });
 
-        table.getColumns().addAll(titleCol, borrowerCol, studentNameCol, phoneCol, loanCol, dueCol, estFineCol);
+        TableColumn<LoanRecord, String> statusCol = new TableColumn<>("Status");
+        statusCol.setCellValueFactory(data -> {
+            LoanRecord lr = data.getValue();
+            if (lr.isHasUnpaidFine()) {
+                return new ReadOnlyStringWrapper("⚠ Payment Due");
+            }
+            return new ReadOnlyStringWrapper("Active");
+        });
 
-        Label titleLabel = new Label("Return a book");
+        table.getColumns().addAll(titleCol, borrowerCol, studentNameCol, phoneCol, loanCol, dueCol, estFineCol, statusCol);
+
+        Label titleLabel = new Label("Return Book / Payment");
         titleLabel.setStyle(ViewStyles.TITLE_STYLE);
 
         Label searchLabel = new Label("Search:");
@@ -114,7 +127,7 @@ public class ReturnBookView {
         notesRow.setAlignment(Pos.CENTER_LEFT);
         VBox top = new VBox(10, titleLabel, searchRow, notesRow);
 
-        Button returnButton = new Button("Record return");
+        Button returnButton = new Button("Return / Pay");
         ViewStyles.stylePrimaryButton(returnButton, font);
         returnButton.setPrefWidth(150);
         returnButton.setOnAction(e -> {
