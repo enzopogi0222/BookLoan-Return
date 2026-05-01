@@ -114,10 +114,10 @@ public class Transactions implements Runnable {
 
     private boolean matchesDateRange(LoanTransaction t, LocalDate from, LocalDate to) {
         if (from == null && to == null) return true;
-        
+
         // We filter based on the loan_date
         if (t.getLoanDate() == null || t.getLoanDate().isEmpty()) return false;
-        
+
         try {
             LocalDate loanDate = LocalDate.parse(t.getLoanDate());
             if (from != null && loanDate.isBefore(from)) return false;
@@ -127,7 +127,6 @@ public class Transactions implements Runnable {
             return false;
         }
     }
-
     private static boolean matches(LoanTransaction t, String q) {
         return contains(t.getBookTitle(), q)
                 || contains(t.getBorrowerName(), q)

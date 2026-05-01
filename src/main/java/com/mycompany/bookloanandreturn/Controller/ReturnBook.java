@@ -38,47 +38,78 @@ public class ReturnBook {
     }
 
     private void loadActiveLoans() {
-        String sql = """
+        // Query 1: Active loans (not yet returned)
+        String activeSql = """
                 SELECT l.loan_id, l.book_id, b.bookName, l.borrower_name, l.student_id,
-                       s.full_name AS student_name, s.phone, l.loan_date, l.due_date
+                       s.full_name AS student_name, s.phone, l.loan_date, l.due_date,
+                       0 as return_id, 0 as remaining_balance, FALSE as has_unpaid_fine
                 FROM loan l
                 INNER JOIN book b ON b.book_id = l.book_id
                 LEFT JOIN book_return r ON r.loan_id = l.loan_id
                 LEFT JOIN student s ON s.student_id = l.student_id
                 WHERE r.return_id IS NULL
-                ORDER BY l.loan_date DESC, l.loan_id DESC
                 """;
+
+        // Query 2: Returned books with unpaid fines (for additional payments)
+        String unpaidSql = """
+                SELECT l.loan_id, l.book_id, b.bookName, l.borrower_name, l.student_id,
+                       s.full_name AS student_name, s.phone, l.loan_date, l.due_date,
+                       r.return_id, (r.fine_pesos - r.amount_paid) as remaining_balance,
+                       TRUE as has_unpaid_fine
+                FROM loan l
+                INNER JOIN book b ON b.book_id = l.book_id
+                INNER JOIN book_return r ON r.loan_id = l.loan_id
+                LEFT JOIN student s ON s.student_id = l.student_id
+                WHERE r.fine_paid = FALSE AND r.fine_pesos > r.amount_paid
+                """;
+
         List<LoanRecord> rows = new ArrayList<>();
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                LoanRecord lr = new LoanRecord();
-                lr.setLoanId(rs.getInt("loan_id"));
-                lr.setBookId(rs.getInt("book_id"));
-                String title = rs.getString("bookName");
-                lr.setBookTitle(title != null && !title.isBlank() ? title : "—");
-                lr.setBorrowerName(rs.getString("borrower_name"));
-                lr.setStudentId(rs.getLong("student_id"));
-                lr.setStudentName(rs.getString("student_name"));
-                lr.setPhone(rs.getString("phone"));
-                Date ld = rs.getDate("loan_date");
-                Date dd = rs.getDate("due_date");
-                lr.setLoanDate(ld != null ? ld.toLocalDate().toString() : "");
-                if (dd != null) {
-                    LocalDate dueLocal = dd.toLocalDate();
-                    lr.setDueDate(dueLocal.toString());
-                    lr.setDueDateValue(dueLocal);
-                } else {
-                    lr.setDueDate("");
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            // Load active loans
+            try (PreparedStatement ps = conn.prepareStatement(activeSql);
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    rows.add(mapLoanRecord(rs));
                 }
-                rows.add(lr);
+            }
+            // Load returned books with unpaid fines
+            try (PreparedStatement ps = conn.prepareStatement(unpaidSql);
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    rows.add(mapLoanRecord(rs));
+                }
             }
             allLoans = rows;
             applyFilter();
         } catch (SQLException ex) {
             view.showError(dbMessage(ex));
         }
+    }
+
+    private LoanRecord mapLoanRecord(ResultSet rs) throws SQLException {
+        LoanRecord lr = new LoanRecord();
+        lr.setLoanId(rs.getInt("loan_id"));
+        lr.setBookId(rs.getInt("book_id"));
+        String title = rs.getString("bookName");
+        lr.setBookTitle(title != null && !title.isBlank() ? title : "—");
+        lr.setBorrowerName(rs.getString("borrower_name"));
+        lr.setStudentId(rs.getLong("student_id"));
+        lr.setStudentName(rs.getString("student_name"));
+        lr.setPhone(rs.getString("phone"));
+        Date ld = rs.getDate("loan_date");
+        Date dd = rs.getDate("due_date");
+        lr.setLoanDate(ld != null ? ld.toLocalDate().toString() : "");
+        if (dd != null) {
+            LocalDate dueLocal = dd.toLocalDate();
+            lr.setDueDate(dueLocal.toString());
+            lr.setDueDateValue(dueLocal);
+        } else {
+            lr.setDueDate("");
+        }
+        lr.setReturnId(rs.getInt("return_id"));
+        lr.setRemainingBalance(rs.getInt("remaining_balance"));
+        lr.setHasUnpaidFine(rs.getBoolean("has_unpaid_fine"));
+        return lr;
     }
 
     private void applyFilter() {
@@ -112,7 +143,7 @@ public class ReturnBook {
     private void recordReturn() {
         List<LoanRecord> selected = view.getSelectedLoans();
         if (selected.isEmpty()) {
-            view.showError("Please select at least one active loan to return.");
+            view.showError("Please select at least one active loan or unpaid fine to process.");
             return;
         }
 
@@ -127,8 +158,18 @@ public class ReturnBook {
         // First pass: calculate fines and build receipt data (no DB operations yet)
         for (LoanRecord loan : selected) {
             LocalDate due = loan.getDueDateValue();
-            int fine = OverdueFine.finePesos(due, returnDay);
-            long daysLate = due != null ? ChronoUnit.DAYS.between(due, returnDay) : 0L;
+            int fine;
+            long daysLate;
+
+            if (loan.isHasUnpaidFine()) {
+                // For books already returned with unpaid fine, use remaining balance
+                fine = loan.getRemainingBalance();
+                daysLate = 0; // Already calculated when first returned
+            } else {
+                // For active loans, calculate fine based on overdue days
+                fine = OverdueFine.finePesos(due, returnDay);
+                daysLate = due != null ? ChronoUnit.DAYS.between(due, returnDay) : 0L;
+            }
             totalFine += fine;
 
             if (multiReceipt.getBorrowerName() == null) {
@@ -137,9 +178,10 @@ public class ReturnBook {
             }
             LocalDate loanDate = (loan.getLoanDate() != null && !loan.getLoanDate().isEmpty())
                     ? LocalDate.parse(loan.getLoanDate()) : null;
-            // Use loan_id as temporary return_id for display purposes
+            // Use existing return_id for unpaid fines, loan_id for new returns
+            int returnId = loan.isHasUnpaidFine() ? loan.getReturnId() : loan.getLoanId();
             multiReceipt.addItem(new MultiReceiptData.ReceiptItem(
-                    loan.getLoanId(), loan.getLoanId(), loan.getBookTitle(),
+                    returnId, loan.getLoanId(), loan.getBookTitle(),
                     loanDate, due, daysLate, fine));
         }
 
@@ -149,7 +191,8 @@ public class ReturnBook {
             receiptView.displayMultiReceipt(multiReceipt);
             receiptView.addPayListener(() -> {
                 // Only return books and record payment when "Pay Fine" is clicked
-                processReturnWithPayment(selected, multiReceipt, returnDay, notes);
+                int paymentAmount = receiptView.getPaymentAmount();
+                processReturnWithPayment(selected, multiReceipt, returnDay, notes, paymentAmount);
             });
             receiptView.show();
             // Check if payment was made
@@ -167,10 +210,12 @@ public class ReturnBook {
     }
 
     private void processReturnWithPayment(List<LoanRecord> selected, MultiReceiptData multiReceipt,
-                                          LocalDate returnDay, String notes) {
-        String insReturn = "INSERT INTO book_return (loan_id, return_date, fine_pesos, fine_paid, notes) VALUES (?, ?, ?, TRUE, ?)";
+                                          LocalDate returnDay, String notes, int totalPaymentAmount) {
+        String insReturn = "INSERT INTO book_return (loan_id, return_date, fine_pesos, amount_paid, fine_paid, notes) VALUES (?, ?, ?, ?, ?, ?)";
+        String updReturn = "UPDATE book_return SET amount_paid = amount_paid + ?, fine_paid = ? WHERE return_id = ?";
         String incStock = "UPDATE book SET stock = stock + 1 WHERE book_id = ?";
         int successCount = 0;
+        int distributedPayment = 0;
         StringBuilder errors = new StringBuilder();
 
         try (Connection conn = DatabaseConnection.getConnection()) {
@@ -180,34 +225,61 @@ public class ReturnBook {
                 LoanRecord loan = selected.get(i);
                 MultiReceiptData.ReceiptItem item = multiReceipt.getItems().get(i);
 
-                try (PreparedStatement ins = conn.prepareStatement(insReturn, Statement.RETURN_GENERATED_KEYS);
-                     PreparedStatement upd = conn.prepareStatement(incStock)) {
-                    ins.setInt(1, loan.getLoanId());
-                    ins.setDate(2, Date.valueOf(returnDay));
-                    ins.setInt(3, item.fineAmount);
-                    if (notes.isEmpty()) {
-                        ins.setNull(4, java.sql.Types.VARCHAR);
-                    } else {
-                        ins.setString(4, notes);
-                    }
-                    ins.executeUpdate();
+                // Distribute payment across items
+                int itemPayment;
+                if (i == selected.size() - 1) {
+                    itemPayment = totalPaymentAmount - distributedPayment;
+                } else {
+                    itemPayment = Math.min(item.fineAmount, totalPaymentAmount - distributedPayment);
+                }
+                distributedPayment += itemPayment;
+                boolean fullyPaid = itemPayment >= item.fineAmount;
 
+                try {
                     int returnId;
-                    try (ResultSet generatedKeys = ins.getGeneratedKeys()) {
-                        if (generatedKeys.next()) {
-                            returnId = generatedKeys.getInt(1);
-                        } else {
-                            returnId = 0;
-                        }
-                    }
 
-                    upd.setInt(1, loan.getBookId());
-                    int n = upd.executeUpdate();
-                    if (n != 1) {
-                        conn.rollback();
-                        view.showError("Could not update book stock for: " + loan.getBookTitle());
-                        conn.setAutoCommit(true);
-                        return;
+                    if (loan.isHasUnpaidFine()) {
+                        // Book already returned - just update payment
+                        try (PreparedStatement upd = conn.prepareStatement(updReturn)) {
+                            upd.setInt(1, itemPayment);
+                            upd.setBoolean(2, fullyPaid);
+                            upd.setInt(3, loan.getReturnId());
+                            upd.executeUpdate();
+                        }
+                        returnId = loan.getReturnId();
+                    } else {
+                        // New return - insert record
+                        try (PreparedStatement ins = conn.prepareStatement(insReturn, Statement.RETURN_GENERATED_KEYS);
+                             PreparedStatement upd = conn.prepareStatement(incStock)) {
+                            ins.setInt(1, loan.getLoanId());
+                            ins.setDate(2, Date.valueOf(returnDay));
+                            ins.setInt(3, item.fineAmount);
+                            ins.setInt(4, itemPayment);
+                            ins.setBoolean(5, fullyPaid);
+                            if (notes.isEmpty()) {
+                                ins.setNull(6, java.sql.Types.VARCHAR);
+                            } else {
+                                ins.setString(6, notes);
+                            }
+                            ins.executeUpdate();
+
+                            try (ResultSet generatedKeys = ins.getGeneratedKeys()) {
+                                if (generatedKeys.next()) {
+                                    returnId = generatedKeys.getInt(1);
+                                } else {
+                                    returnId = 0;
+                                }
+                            }
+
+                            upd.setInt(1, loan.getBookId());
+                            int n = upd.executeUpdate();
+                            if (n != 1) {
+                                conn.rollback();
+                                view.showError("Could not update book stock for: " + loan.getBookTitle());
+                                conn.setAutoCommit(true);
+                                return;
+                            }
+                        }
                     }
 
                     // Save receipt and mark as paid
@@ -222,7 +294,7 @@ public class ReturnBook {
                     singleReceipt.setDaysLate(item.daysLate);
                     singleReceipt.setFineAmount(item.fineAmount);
                     singleReceipt.setNotes(notes);
-                    saveReceiptAndMarkPaid(conn, singleReceipt);
+                    saveReceiptAndMarkPaid(conn, singleReceipt, itemPayment, fullyPaid);
 
                     successCount++;
                 } catch (SQLException ex) {
@@ -231,7 +303,7 @@ public class ReturnBook {
                     if (ex.getErrorCode() == 1062 || (ex.getMessage() != null && ex.getMessage().contains("Duplicate"))) {
                         errors.append(loan.getBookTitle()).append(" was already returned.\n");
                     } else {
-                        errors.append("Error returning ").append(loan.getBookTitle()).append(": ").append(ex.getMessage()).append("\n");
+                        errors.append("Error processing ").append(loan.getBookTitle()).append(": ").append(ex.getMessage()).append("\n");
                     }
                 }
             }
@@ -243,8 +315,17 @@ public class ReturnBook {
                 view.showError(errors.toString());
             }
             if (successCount > 0) {
-                view.showSuccess("Returned " + successCount + " book(s). Fine paid: "
-                    + OverdueFine.formatPesos(multiReceipt.getTotalFine()) + ". Stock updated.");
+                int remaining = multiReceipt.getTotalFine() - totalPaymentAmount;
+                String msg;
+                if (remaining <= 0) {
+                    msg = "Payment recorded for " + successCount + " item(s). Fine fully paid: "
+                        + OverdueFine.formatPesos(totalPaymentAmount);
+                } else {
+                    msg = "Payment recorded for " + successCount + " item(s). Payment: "
+                        + OverdueFine.formatPesos(totalPaymentAmount) + ". Remaining balance: "
+                        + OverdueFine.formatPesos(remaining);
+                }
+                view.showSuccess(msg);
                 view.clearSelection();
                 loadActiveLoans();
             }
@@ -254,7 +335,7 @@ public class ReturnBook {
     }
 
     private void processReturnWithoutPayment(List<LoanRecord> selected, LocalDate returnDay, String notes) {
-        String insReturn = "INSERT INTO book_return (loan_id, return_date, fine_pesos, fine_paid, notes) VALUES (?, ?, ?, TRUE, ?)";
+        String insReturn = "INSERT INTO book_return (loan_id, return_date, fine_pesos, amount_paid, fine_paid, notes) VALUES (?, ?, ?, 0, TRUE, ?)";
         String incStock = "UPDATE book SET stock = stock + 1 WHERE book_id = ?";
         int successCount = 0;
         StringBuilder errors = new StringBuilder();
@@ -311,17 +392,15 @@ public class ReturnBook {
         }
     }
 
-    private void saveReceiptAndMarkPaid(Connection conn, ReceiptData receipt) throws SQLException {
-        String updateFinePaid = "UPDATE book_return SET fine_paid = TRUE WHERE return_id = ?";
+    private void saveReceiptAndMarkPaid(Connection conn, ReceiptData receipt,
+                                        int amountPaid, boolean fullyPaid) throws SQLException {
+        // book_return is already updated in processReturnWithPayment
+        // Just insert a receipt record for this payment
         String insertReceipt = "INSERT INTO receipts (return_id, loan_id, borrower_name, book_title, " +
-                "loan_date, due_date, return_date, days_late, fine_amount, fine_paid, notes) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?)";
+                "loan_date, due_date, return_date, days_late, fine_amount, amount_paid, fine_paid, notes) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        try (PreparedStatement upd = conn.prepareStatement(updateFinePaid);
-             PreparedStatement ins = conn.prepareStatement(insertReceipt)) {
-            upd.setInt(1, receipt.getReturnId());
-            upd.executeUpdate();
-
+        try (PreparedStatement ins = conn.prepareStatement(insertReceipt)) {
             ins.setInt(1, receipt.getReturnId());
             ins.setInt(2, receipt.getLoanId());
             ins.setString(3, receipt.getBorrowerName());
@@ -335,10 +414,12 @@ public class ReturnBook {
             ins.setDate(7, Date.valueOf(receipt.getReturnDate()));
             ins.setLong(8, receipt.getDaysLate());
             ins.setInt(9, receipt.getFineAmount());
+            ins.setInt(10, amountPaid);
+            ins.setBoolean(11, fullyPaid);
             if (receipt.getNotes() != null && !receipt.getNotes().isEmpty()) {
-                ins.setString(10, receipt.getNotes());
+                ins.setString(12, receipt.getNotes());
             } else {
-                ins.setNull(10, java.sql.Types.VARCHAR);
+                ins.setNull(12, java.sql.Types.VARCHAR);
             }
             ins.executeUpdate();
         }
@@ -357,6 +438,9 @@ public class ReturnBook {
         }
         if (msg != null && msg.contains("fine_pesos")) {
             return "Database needs the fine column. Run sql/migration_add_fine_pesos.sql on bookloan_and_return.";
+        }
+        if (msg != null && msg.contains("amount_paid")) {
+            return "Database needs the amount_paid column. Run sql/migration_add_amount_paid.sql on bookloan_and_return.";
         }
         return "Database error: " + (msg != null ? msg : ex.getClass().getSimpleName());
     }
