@@ -111,6 +111,21 @@ public class MainMenu {
                 }
             }
 
+            // Unreturned books count (books currently loaned out)
+            String unreturnedBooksSql = """
+                SELECT COALESCE(SUM(li.quantity), 0) as total
+                FROM loan_item li
+                JOIN loan l ON l.loan_id = li.loan_id
+                LEFT JOIN book_return r ON r.loan_id = l.loan_id
+                WHERE r.return_id IS NULL
+                """;
+            try (PreparedStatement ps = conn.prepareStatement(unreturnedBooksSql);
+                 ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    view.setUnreturnedBooks(rs.getInt("total"));
+                }
+            }
+
         } catch (SQLException ex) {
             // Silently fail - stats will show 0
         }

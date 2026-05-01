@@ -31,6 +31,7 @@ public class MainMenuView {
     private Label returnedTodayValue;
     private Label unpaidFinesValue;
     private Label totalBooksValue;
+    private Label unreturnedBooksValue;
 
     public MainMenuView(Stage stage) {
         this.stage = stage;
@@ -105,7 +106,7 @@ public class MainMenuView {
         this.stage.setScene(scene);
     }
 
-    private VBox activeLoansCard, returnedTodayCard, unpaidFinesCard, totalBooksCard;
+    private VBox activeLoansCard, returnedTodayCard, unpaidFinesCard, totalBooksCard, unreturnedBooksCard;
 
     private VBox createStatsPanel() {
         // Create value labels first
@@ -113,14 +114,16 @@ public class MainMenuView {
         returnedTodayValue = createValueLabel("0", "#4CAF50");
         unpaidFinesValue = createValueLabel("₱0", "#F44336");
         totalBooksValue = createValueLabel("0", "#9C27B0");
+        unreturnedBooksValue = createValueLabel("0", "#FF9800");
 
         // Create stat cards
         activeLoansCard = createStatCard("Active Loans", activeLoansValue, "#2196F3");
         returnedTodayCard = createStatCard("Returned Today", returnedTodayValue, "#4CAF50");
         unpaidFinesCard = createStatCard("Unpaid Fines", unpaidFinesValue, "#F44336");
         totalBooksCard = createStatCard("Total Books", totalBooksValue, "#9C27B0");
+        unreturnedBooksCard = createStatCard("Unreturned Books", unreturnedBooksValue, "#FF9800");
 
-        HBox statsRow = new HBox(12, activeLoansCard, returnedTodayCard, unpaidFinesCard, totalBooksCard);
+        HBox statsRow = new HBox(12, activeLoansCard, returnedTodayCard, unpaidFinesCard, unreturnedBooksCard, totalBooksCard);
         statsRow.setAlignment(Pos.CENTER);
 
         VBox panel = new VBox(8, statsRow);
@@ -174,6 +177,11 @@ public class MainMenuView {
     public void setTotalBooks(int count) {
         pulseCard(totalBooksCard);
         totalBooksValue.setText(String.valueOf(count));
+    }
+
+    public void setUnreturnedBooks(int count) {
+        pulseCard(unreturnedBooksCard);
+        unreturnedBooksValue.setText(String.valueOf(count));
     }
 
     private void pulseCard(VBox card) {
