@@ -22,6 +22,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
+import javafx.scene.control.TextField;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -38,6 +39,8 @@ public class ReceiptView {
     private final VBox receiptContent;
     private Runnable payListener;
     private boolean paid = false;
+    private int paymentAmount = 0;
+    private int totalFine = 0;
     private String borrowerName = "";
     private String studentId = "";
 
@@ -120,6 +123,9 @@ public class ReceiptView {
         fineBox.getChildren().addAll(daysLateLabel, fineLabel);
 
         boolean hasFine = data.getFineAmount() > 0;
+        this.totalFine = data.getFineAmount();
+        VBox paymentBox = createPaymentBox(hasFine, data.getFineAmount());
+
         if (data.getNotes() != null && !data.getNotes().isEmpty()) {
             Separator separator4 = new Separator();
             Label notesLabel = new Label("Notes: " + data.getNotes());
@@ -127,11 +133,11 @@ public class ReceiptView {
             notesLabel.setStyle("-fx-text-fill: #666;");
             receiptContent.getChildren().addAll(headerBox, separator1, receiptInfo, borrowerLabel,
                     separator2, bookLabel, loanInfo, returnInfo,
-                    separator3, fineBox, separator4, notesLabel, createButtonBox(hasFine));
+                    separator3, fineBox, paymentBox, separator4, notesLabel, createButtonBox(hasFine));
         } else {
             receiptContent.getChildren().addAll(headerBox, separator1, receiptInfo, borrowerLabel,
                     separator2, bookLabel, loanInfo, returnInfo,
-                    separator3, fineBox, createButtonBox(hasFine));
+                    separator3, fineBox, paymentBox, createButtonBox(hasFine));
         }
     }
 
@@ -195,6 +201,9 @@ public class ReceiptView {
         totalBox.getChildren().addAll(countLabel, totalLabel);
 
         boolean hasFine = data.getTotalFine() > 0;
+        this.totalFine = data.getTotalFine();
+        VBox paymentBox = createPaymentBox(hasFine, data.getTotalFine());
+
         if (data.getNotes() != null && !data.getNotes().isEmpty()) {
             Separator separator4 = new Separator();
             Label notesLabel = new Label("Notes: " + data.getNotes());
@@ -202,11 +211,11 @@ public class ReceiptView {
             notesLabel.setStyle("-fx-text-fill: #666;");
             receiptContent.getChildren().addAll(headerBox, separator1, receiptInfo, borrowerLabel,
                     separator2, itemsBox,
-                    separator3, totalBox, separator4, notesLabel, createButtonBox(hasFine));
+                    separator3, totalBox, paymentBox, separator4, notesLabel, createButtonBox(hasFine));
         } else {
             receiptContent.getChildren().addAll(headerBox, separator1, receiptInfo, borrowerLabel,
                     separator2, itemsBox,
-                    separator3, totalBox, createButtonBox(hasFine));
+                    separator3, totalBox, paymentBox, createButtonBox(hasFine));
         }
     }
 
@@ -229,6 +238,9 @@ public class ReceiptView {
             ViewStyles.stylePrimaryButton(payButton);
             payButton.setDefaultButton(false);
             payButton.setOnAction(e -> {
+                if (!validatePayment()) {
+                    return;
+                }
                 paid = true;
                 System.out.println("[DEBUG] Pay Fine button clicked - executing payListener");
                 if (payListener != null) payListener.run();
@@ -255,6 +267,95 @@ public class ReceiptView {
     public boolean isPaid() {
         System.out.println("[DEBUG] isPaid() called, returning: " + paid);
         return paid;
+    }
+
+    public int getPaymentAmount() {
+        return paymentAmount;
+    }
+
+    private VBox createPaymentBox(boolean hasFine, int totalFine) {
+        VBox paymentBox = new VBox(8);
+        paymentBox.setPadding(new Insets(10, 0, 0, 0));
+
+        if (hasFine) {
+            Label paymentLabel = new Label("Payment Amount (pesos):");
+            paymentLabel.setFont(Font.font("Segoe UI", 12));
+
+            TextField paymentField = new TextField();
+            paymentField.setPromptText("Enter payment amount");
+            paymentField.setText(String.valueOf(totalFine));
+            ViewStyles.styleInput(paymentField);
+            paymentField.setMaxWidth(200);
+
+            // Change label - updates dynamically
+            Label changeLabel = new Label("Change: ₱0");
+            changeLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+            changeLabel.setStyle("-fx-text-fill: #4CAF50;");
+            changeLabel.setVisible(false);
+
+            paymentField.textProperty().addListener((obs, oldVal, newVal) -> {
+                if (!newVal.matches("\\d*")) {
+                    paymentField.setText(newVal.replaceAll("[^\\d]", ""));
+                    return;
+                }
+                try {
+                    int payment = newVal.isEmpty() ? 0 : Integer.parseInt(newVal);
+                    int change = payment - this.totalFine;
+                    if (change > 0) {
+                        changeLabel.setText("Change: " + OverdueFine.formatPesos(change));
+                        changeLabel.setVisible(true);
+                    } else {
+                        changeLabel.setVisible(false);
+                    }
+                } catch (NumberFormatException e) {
+                    changeLabel.setVisible(false);
+                }
+            });
+
+            // Initial check
+            try {
+                int initialPayment = Integer.parseInt(paymentField.getText());
+                int initialChange = initialPayment - this.totalFine;
+                if (initialChange > 0) {
+                    changeLabel.setText("Change: " + OverdueFine.formatPesos(initialChange));
+                    changeLabel.setVisible(true);
+                }
+            } catch (NumberFormatException ignored) {}
+
+            paymentBox.getChildren().addAll(paymentLabel, paymentField, changeLabel);
+        }
+
+        return paymentBox;
+    }
+
+    private boolean validatePayment() {
+        for (javafx.scene.Node node : receiptContent.getChildren()) {
+            if (node instanceof VBox vbox) {
+                for (javafx.scene.Node child : vbox.getChildren()) {
+                    if (child instanceof TextField field) {
+                        String text = field.getText().trim();
+                        if (text.isEmpty()) {
+                            ViewStyles.showErrorAlert("Please enter a payment amount.");
+                            return false;
+                        }
+                        try {
+                            int enteredAmount = Integer.parseInt(text);
+                            if (enteredAmount <= 0) {
+                                ViewStyles.showErrorAlert("Payment amount must be greater than 0.");
+                                return false;
+                            }
+                            // Cap payment at total fine (no refunds)
+                            paymentAmount = Math.min(enteredAmount, totalFine);
+                            return true;
+                        } catch (NumberFormatException e) {
+                            ViewStyles.showErrorAlert("Invalid payment amount.");
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private void printToWord() {

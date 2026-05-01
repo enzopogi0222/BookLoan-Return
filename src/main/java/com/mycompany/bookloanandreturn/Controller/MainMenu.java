@@ -23,6 +23,7 @@ public class MainMenu {
         view.addLoanBookListener(this::openLoanBook);
         view.addReturnBookListener(this::openReturnBook);
         view.addTransactionsListener(this::openTransactions);
+        view.addReportsListener(this::openReports);
 
         // Create auto-refresh timer (refresh every 5 seconds)
         refreshTimer = new Timeline(new KeyFrame(Duration.seconds(5), e -> loadStatistics()));
@@ -66,7 +67,7 @@ public class MainMenu {
 
             // Unpaid fines total (from returned books + estimated from active overdue loans)
             String unpaidFinesSql = """
-                SELECT COALESCE(SUM(fine_pesos), 0) as total FROM book_return
+                SELECT COALESCE(SUM(fine_pesos - amount_paid), 0) as total FROM book_return
                 WHERE fine_paid = FALSE AND fine_pesos > 0
                 """;
             int unpaidFromReturned = 0;
@@ -140,6 +141,15 @@ public class MainMenu {
     private void openTransactions() {
         refreshTimer.pause();
         new Transactions(view.getStage(), () -> {
+            view.show();
+            loadStatistics();
+            refreshTimer.play();
+        });
+    }
+
+    private void openReports() {
+        refreshTimer.pause();
+        new Reports(view.getStage(), () -> {
             view.show();
             loadStatistics();
             refreshTimer.play();
