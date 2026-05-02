@@ -20,9 +20,12 @@ public class MultiReceiptData {
         public LocalDate dueDate;
         public long daysLate;
         public int fineAmount;
+        public String bookCondition;
+        public double bookCost;
+        public int overdueFine;
 
         public ReceiptItem(int returnId, int loanId, String bookTitle, LocalDate loanDate, 
-                          LocalDate dueDate, long daysLate, int fineAmount) {
+                          LocalDate dueDate, long daysLate, int fineAmount, String bookCondition, double bookCost, int overdueFine) {
             this.returnId = returnId;
             this.loanId = loanId;
             this.bookTitle = bookTitle;
@@ -30,6 +33,9 @@ public class MultiReceiptData {
             this.dueDate = dueDate;
             this.daysLate = daysLate;
             this.fineAmount = fineAmount;
+            this.bookCondition = bookCondition;
+            this.bookCost = bookCost;
+            this.overdueFine = overdueFine;
         }
     }
 
