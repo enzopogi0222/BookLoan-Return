@@ -21,6 +21,8 @@ public class LoanRecord {
     private int remainingBalance;
     /** Return ID if book has been returned (for additional payments). */
     private int returnId;
+    /** Original days late when the book was first returned (for unpaid fine display). */
+    private long originalDaysLate;
 
     public int getLoanId() {
         return loanId;
@@ -124,5 +126,13 @@ public class LoanRecord {
 
     public void setReturnId(int returnId) {
         this.returnId = returnId;
+    }
+
+    public long getOriginalDaysLate() {
+        return originalDaysLate;
+    }
+
+    public void setOriginalDaysLate(long originalDaysLate) {
+        this.originalDaysLate = originalDaysLate;
     }
 }

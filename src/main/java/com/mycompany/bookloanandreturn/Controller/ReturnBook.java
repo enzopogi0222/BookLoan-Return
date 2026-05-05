@@ -42,7 +42,8 @@ public class ReturnBook {
         String activeSql = """
                 SELECT l.loan_id, l.book_id, b.bookName, l.borrower_name, l.student_id,
                        s.full_name AS student_name, s.phone, l.loan_date, l.due_date,
-                       0 as return_id, 0 as remaining_balance, FALSE as has_unpaid_fine
+                       0 as return_id, 0 as remaining_balance, FALSE as has_unpaid_fine,
+                       0 as original_days_late
                 FROM loan l
                 INNER JOIN book b ON b.book_id = l.book_id
                 LEFT JOIN book_return r ON r.loan_id = l.loan_id
@@ -55,7 +56,8 @@ public class ReturnBook {
                 SELECT l.loan_id, l.book_id, b.bookName, l.borrower_name, l.student_id,
                        s.full_name AS student_name, s.phone, l.loan_date, l.due_date,
                        r.return_id, (r.fine_pesos - r.amount_paid) as remaining_balance,
-                       TRUE as has_unpaid_fine
+                       TRUE as has_unpaid_fine,
+                       GREATEST(0, DATEDIFF(r.return_date, l.due_date)) as original_days_late
                 FROM loan l
                 INNER JOIN book b ON b.book_id = l.book_id
                 INNER JOIN book_return r ON r.loan_id = l.loan_id
@@ -109,6 +111,7 @@ public class ReturnBook {
         lr.setReturnId(rs.getInt("return_id"));
         lr.setRemainingBalance(rs.getInt("remaining_balance"));
         lr.setHasUnpaidFine(rs.getBoolean("has_unpaid_fine"));
+        lr.setOriginalDaysLate(rs.getLong("original_days_late"));
         return lr;
     }
 
@@ -164,7 +167,7 @@ public class ReturnBook {
             if (loan.isHasUnpaidFine()) {
                 // For books already returned with unpaid fine, use remaining balance
                 fine = loan.getRemainingBalance();
-                daysLate = 0; // Already calculated when first returned
+                daysLate = loan.getOriginalDaysLate();
             } else {
                 // For active loans, calculate fine based on overdue days
                 fine = OverdueFine.finePesos(due, returnDay);
