@@ -51,7 +51,7 @@ public class LoanBook {
     }
 
     private void loadAvailableBooks() {
-        String sql = "SELECT book_id, bookName, stock FROM book WHERE stock > 0 ORDER BY bookName";
+        String sql = "SELECT book_id, bookName, stock, COALESCE(cost, 0) as cost FROM book WHERE stock > 0 ORDER BY bookName";
         List<AvailableBook> list = new ArrayList<>();
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -60,8 +60,9 @@ public class LoanBook {
                 int id = rs.getInt("book_id");
                 String name = rs.getString("bookName");
                 int stock = rs.getInt("stock");
+                double cost = rs.getDouble("cost");
                 if (name == null || name.isBlank()) name = "—";
-                list.add(new AvailableBook(id, name, stock));
+                list.add(new AvailableBook(id, name, stock, cost));
             }
             view.setAvailableBooks(list);
             if (list.isEmpty()) {

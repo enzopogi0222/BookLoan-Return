@@ -113,9 +113,8 @@ public class MainMenu {
 
             // Unreturned books count (books currently loaned out)
             String unreturnedBooksSql = """
-                SELECT COALESCE(SUM(li.quantity), 0) as total
-                FROM loan_item li
-                JOIN loan l ON l.loan_id = li.loan_id
+                SELECT COUNT(*) as total
+                FROM loan l
                 LEFT JOIN book_return r ON r.loan_id = l.loan_id
                 WHERE r.return_id IS NULL
                 """;
