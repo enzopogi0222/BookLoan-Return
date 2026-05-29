@@ -13,6 +13,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableColumn;
@@ -99,7 +100,37 @@ public class ReturnBookView {
             return new ReadOnlyStringWrapper("Active");
         });
 
-        table.getColumns().addAll(titleCol, borrowerCol, studentNameCol, phoneCol, loanCol, dueCol, estFineCol, statusCol);
+        TableColumn<LoanRecord, String> conditionCol = new TableColumn<>("Condition");
+        conditionCol.setCellValueFactory(data -> {
+            String cond = data.getValue().getBookCondition();
+            return new ReadOnlyStringWrapper(cond != null ? cond : "good");
+        });
+        conditionCol.setCellFactory(col -> {
+            javafx.scene.control.TableCell<LoanRecord, String> cell = new javafx.scene.control.TableCell<>() {
+                private final ComboBox<String> comboBox = new ComboBox<>();
+                {
+                    comboBox.getItems().addAll("good", "damaged", "lost");
+                    comboBox.setPrefWidth(100);
+                }
+                @Override
+                protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty) {
+                        setGraphic(null);
+                    } else {
+                        comboBox.setValue(item);
+                        setGraphic(comboBox);
+                        comboBox.valueProperty().addListener((obs, o, n) -> {
+                            LoanRecord lr = getTableView().getItems().get(getIndex());
+                            lr.setBookCondition(n);
+                        });
+                    }
+                }
+            };
+            return cell;
+        });
+
+        table.getColumns().addAll(titleCol, borrowerCol, studentNameCol, phoneCol, loanCol, dueCol, estFineCol, statusCol, conditionCol);
 
         Label titleLabel = new Label("Return Book / Payment");
         titleLabel.setStyle(ViewStyles.TITLE_STYLE);

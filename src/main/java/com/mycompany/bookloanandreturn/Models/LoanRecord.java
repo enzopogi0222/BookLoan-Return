@@ -23,6 +23,10 @@ public class LoanRecord {
     private int returnId;
     /** Original days late when the book was first returned (for unpaid fine display). */
     private long originalDaysLate;
+    /** Book cost for damaged/lost book fine calculation. */
+    private double bookCost;
+    /** Book condition (good, damaged, lost). */
+    private String bookCondition = "good";
 
     public int getLoanId() {
         return loanId;
@@ -134,5 +138,21 @@ public class LoanRecord {
 
     public void setOriginalDaysLate(long originalDaysLate) {
         this.originalDaysLate = originalDaysLate;
+    }
+
+    public double getBookCost() {
+        return bookCost;
+    }
+
+    public void setBookCost(double bookCost) {
+        this.bookCost = bookCost;
+    }
+
+    public String getBookCondition() {
+        return bookCondition;
+    }
+
+    public void setBookCondition(String bookCondition) {
+        this.bookCondition = bookCondition;
     }
 }

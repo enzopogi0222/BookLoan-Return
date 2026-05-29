@@ -14,6 +14,9 @@ public class ReceiptData {
     private long daysLate;
     private int fineAmount;
     private String notes;
+    private String bookCondition;
+    private double bookCost;
+    private int overdueFine;
 
     public int getLoanId() {
         return loanId;
@@ -93,5 +96,29 @@ public class ReceiptData {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public String getBookCondition() {
+        return bookCondition;
+    }
+
+    public void setBookCondition(String bookCondition) {
+        this.bookCondition = bookCondition;
+    }
+
+    public double getBookCost() {
+        return bookCost;
+    }
+
+    public void setBookCost(double bookCost) {
+        this.bookCost = bookCost;
+    }
+
+    public int getOverdueFine() {
+        return overdueFine;
+    }
+
+    public void setOverdueFine(int overdueFine) {
+        this.overdueFine = overdueFine;
     }
 }

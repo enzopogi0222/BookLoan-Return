@@ -120,7 +120,23 @@ public class ReceiptView {
         fineLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 16));
         fineLabel.setStyle("-fx-text-fill: " + ViewStyles.BRAND_BLUE + ";");
 
-        fineBox.getChildren().addAll(daysLateLabel, fineLabel);
+        fineBox.getChildren().addAll(daysLateLabel);
+
+        if (data.getBookCondition() != null && ("damaged".equals(data.getBookCondition()) || "lost".equals(data.getBookCondition()))) {
+            if (data.getOverdueFine() > 0) {
+                Label lateFineLabel = new Label("Late Fine: " + OverdueFine.formatPesos(data.getOverdueFine()));
+                lateFineLabel.setFont(Font.font("Segoe UI", 12));
+                fineBox.getChildren().add(lateFineLabel);
+            }
+            Label conditionLabel = new Label(String.format("%s — Book Cost: %s",
+                    data.getBookCondition().toUpperCase(),
+                    OverdueFine.formatPesos((int) Math.round(data.getBookCost()))));
+            conditionLabel.setFont(Font.font("Segoe UI", 12));
+            conditionLabel.setStyle("-fx-text-fill: #D32F2F;");
+            fineBox.getChildren().add(conditionLabel);
+        }
+
+        fineBox.getChildren().add(fineLabel);
 
         boolean hasFine = data.getFineAmount() > 0;
         this.totalFine = data.getFineAmount();
@@ -178,12 +194,29 @@ public class ReceiptView {
         VBox itemsBox = new VBox(6);
         itemsBox.setPadding(new Insets(6, 0, 6, 0));
         for (MultiReceiptData.ReceiptItem item : data.getItems()) {
-            Label line = new Label(String.format("%s  •  %d day(s) late  •  %s",
+            String baseText = String.format("%s  •  %d day(s) late",
                     item.bookTitle != null ? item.bookTitle : "—",
-                    item.daysLate,
-                    OverdueFine.formatPesos(item.fineAmount)));
+                    item.daysLate);
+            Label line = new Label(baseText);
             line.setFont(Font.font("Segoe UI", 12));
             itemsBox.getChildren().add(line);
+
+            if (item.bookCondition != null && ("damaged".equals(item.bookCondition) || "lost".equals(item.bookCondition))) {
+                if (item.overdueFine > 0) {
+                    Label lateFineLine = new Label("    Late Fine: " + OverdueFine.formatPesos(item.overdueFine));
+                    lateFineLine.setFont(Font.font("Segoe UI", 12));
+                    itemsBox.getChildren().add(lateFineLine);
+                }
+                Label condLine = new Label(String.format("    %s — Book Cost: %s",
+                        item.bookCondition.toUpperCase(),
+                        OverdueFine.formatPesos((int) Math.round(item.bookCost))));
+                condLine.setFont(Font.font("Segoe UI", 12));
+                condLine.setStyle("-fx-text-fill: #D32F2F;");
+                itemsBox.getChildren().add(condLine);
+            } else {
+                // Append fine amount on same line for good condition
+                line.setText(baseText + "  •  " + OverdueFine.formatPesos(item.fineAmount));
+            }
         }
 
         Separator separator3 = new Separator();

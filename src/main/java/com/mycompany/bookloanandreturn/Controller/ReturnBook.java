@@ -42,6 +42,7 @@ public class ReturnBook {
         String activeSql = """
                 SELECT l.loan_id, l.book_id, b.bookName, l.borrower_name, l.student_id,
                        s.full_name AS student_name, s.phone, l.loan_date, l.due_date,
+                       b.cost as book_cost,
                        0 as return_id, 0 as remaining_balance, FALSE as has_unpaid_fine,
                        0 as original_days_late
                 FROM loan l
@@ -55,6 +56,7 @@ public class ReturnBook {
         String unpaidSql = """
                 SELECT l.loan_id, l.book_id, b.bookName, l.borrower_name, l.student_id,
                        s.full_name AS student_name, s.phone, l.loan_date, l.due_date,
+                       b.cost as book_cost,
                        r.return_id, (r.fine_pesos - r.amount_paid) as remaining_balance,
                        TRUE as has_unpaid_fine,
                        GREATEST(0, DATEDIFF(r.return_date, l.due_date)) as original_days_late
@@ -108,6 +110,7 @@ public class ReturnBook {
         } else {
             lr.setDueDate("");
         }
+        lr.setBookCost(rs.getDouble("book_cost"));
         lr.setReturnId(rs.getInt("return_id"));
         lr.setRemainingBalance(rs.getInt("remaining_balance"));
         lr.setHasUnpaidFine(rs.getBoolean("has_unpaid_fine"));
@@ -162,6 +165,7 @@ public class ReturnBook {
         for (LoanRecord loan : selected) {
             LocalDate due = loan.getDueDateValue();
             int fine;
+            int overdueFine = 0;
             long daysLate;
 
             if (loan.isHasUnpaidFine()) {
@@ -169,9 +173,18 @@ public class ReturnBook {
                 fine = loan.getRemainingBalance();
                 daysLate = loan.getOriginalDaysLate();
             } else {
-                // For active loans, calculate fine based on overdue days
-                fine = OverdueFine.finePesos(due, returnDay);
-                daysLate = due != null ? ChronoUnit.DAYS.between(due, returnDay) : 0L;
+                // For active loans, check book condition per row
+                String cond = loan.getBookCondition();
+                overdueFine = OverdueFine.finePesos(due, returnDay);
+                if ("damaged".equals(cond) || "lost".equals(cond)) {
+                    // Book cost + overdue fine for damaged/lost books
+                    fine = (int) Math.round(loan.getBookCost()) + overdueFine;
+                    daysLate = due != null ? ChronoUnit.DAYS.between(due, returnDay) : 0L;
+                } else {
+                    // For good condition, calculate fine based on overdue days
+                    fine = overdueFine;
+                    daysLate = due != null ? ChronoUnit.DAYS.between(due, returnDay) : 0L;
+                }
             }
             totalFine += fine;
 
@@ -185,7 +198,7 @@ public class ReturnBook {
             int returnId = loan.isHasUnpaidFine() ? loan.getReturnId() : loan.getLoanId();
             multiReceipt.addItem(new MultiReceiptData.ReceiptItem(
                     returnId, loan.getLoanId(), loan.getBookTitle(),
-                    loanDate, due, daysLate, fine));
+                    loanDate, due, daysLate, fine, loan.getBookCondition(), loan.getBookCost(), overdueFine));
         }
 
         // If there are fines, show receipt first and require payment before returning
@@ -214,17 +227,18 @@ public class ReturnBook {
 
     private void processReturnWithPayment(List<LoanRecord> selected, MultiReceiptData multiReceipt,
                                           LocalDate returnDay, String notes, int totalPaymentAmount) {
-        String insReturn = "INSERT INTO book_return (loan_id, return_date, fine_pesos, amount_paid, fine_paid, notes) VALUES (?, ?, ?, ?, ?, ?)";
+        String insReturn = "INSERT INTO book_return (loan_id, return_date, fine_pesos, amount_paid, fine_paid, notes, book_condition) VALUES (?, ?, ?, ?, ?, ?, ?)";
         String updReturn = "UPDATE book_return SET amount_paid = amount_paid + ?, fine_paid = ? WHERE return_id = ?";
         String incStock = "UPDATE book SET stock = stock + 1 WHERE book_id = ?";
         int successCount = 0;
         int distributedPayment = 0;
         StringBuilder errors = new StringBuilder();
+        boolean rolledBack = false;
 
         try (Connection conn = DatabaseConnection.getConnection()) {
             conn.setAutoCommit(false);
 
-            for (int i = 0; i < selected.size(); i++) {
+            for (int i = 0; i < selected.size() && !rolledBack; i++) {
                 LoanRecord loan = selected.get(i);
                 MultiReceiptData.ReceiptItem item = multiReceipt.getItems().get(i);
 
@@ -264,6 +278,7 @@ public class ReturnBook {
                             } else {
                                 ins.setString(6, notes);
                             }
+                            ins.setString(7, loan.getBookCondition());
                             ins.executeUpdate();
 
                             try (ResultSet generatedKeys = ins.getGeneratedKeys()) {
@@ -274,13 +289,16 @@ public class ReturnBook {
                                 }
                             }
 
-                            upd.setInt(1, loan.getBookId());
-                            int n = upd.executeUpdate();
-                            if (n != 1) {
-                                conn.rollback();
-                                view.showError("Could not update book stock for: " + loan.getBookTitle());
-                                conn.setAutoCommit(true);
-                                return;
+                            // Only increment stock if book is not lost
+                            if (!"lost".equals(loan.getBookCondition())) {
+                                upd.setInt(1, loan.getBookId());
+                                int n = upd.executeUpdate();
+                                if (n != 1) {
+                                    conn.rollback();
+                                    view.showError("Could not update book stock for: " + loan.getBookTitle());
+                                    rolledBack = true;
+                                    break;
+                                }
                             }
                         }
                     }
@@ -296,22 +314,28 @@ public class ReturnBook {
                     singleReceipt.setReturnDate(returnDay);
                     singleReceipt.setDaysLate(item.daysLate);
                     singleReceipt.setFineAmount(item.fineAmount);
+                    singleReceipt.setBookCondition(loan.getBookCondition());
+                    singleReceipt.setBookCost(loan.getBookCost());
+                    singleReceipt.setOverdueFine(item.overdueFine);
                     singleReceipt.setNotes(notes);
                     saveReceiptAndMarkPaid(conn, singleReceipt, itemPayment, fullyPaid);
 
                     successCount++;
                 } catch (SQLException ex) {
                     conn.rollback();
-                    conn.setAutoCommit(true);
                     if (ex.getErrorCode() == 1062 || (ex.getMessage() != null && ex.getMessage().contains("Duplicate"))) {
                         errors.append(loan.getBookTitle()).append(" was already returned.\n");
                     } else {
                         errors.append("Error processing ").append(loan.getBookTitle()).append(": ").append(ex.getMessage()).append("\n");
                     }
+                    rolledBack = true;
+                    break;
                 }
             }
 
-            conn.commit();
+            if (!rolledBack) {
+                conn.commit();
+            }
             conn.setAutoCommit(true);
 
             if (errors.length() > 0) {
@@ -338,15 +362,17 @@ public class ReturnBook {
     }
 
     private void processReturnWithoutPayment(List<LoanRecord> selected, LocalDate returnDay, String notes) {
-        String insReturn = "INSERT INTO book_return (loan_id, return_date, fine_pesos, amount_paid, fine_paid, notes) VALUES (?, ?, ?, 0, TRUE, ?)";
+        String insReturn = "INSERT INTO book_return (loan_id, return_date, fine_pesos, amount_paid, fine_paid, notes, book_condition) VALUES (?, ?, ?, 0, TRUE, ?, ?)";
         String incStock = "UPDATE book SET stock = stock + 1 WHERE book_id = ?";
         int successCount = 0;
         StringBuilder errors = new StringBuilder();
+        boolean rolledBack = false;
 
         try (Connection conn = DatabaseConnection.getConnection()) {
             conn.setAutoCommit(false);
 
             for (LoanRecord loan : selected) {
+                if (rolledBack) break;
                 try (PreparedStatement ins = conn.prepareStatement(insReturn, Statement.RETURN_GENERATED_KEYS);
                      PreparedStatement upd = conn.prepareStatement(incStock)) {
                     ins.setInt(1, loan.getLoanId());
@@ -357,29 +383,36 @@ public class ReturnBook {
                     } else {
                         ins.setString(4, notes);
                     }
+                    ins.setString(5, loan.getBookCondition());
                     ins.executeUpdate();
 
-                    upd.setInt(1, loan.getBookId());
-                    int n = upd.executeUpdate();
-                    if (n != 1) {
-                        conn.rollback();
-                        view.showError("Could not update book stock for: " + loan.getBookTitle());
-                        conn.setAutoCommit(true);
-                        return;
+                    // Only increment stock if book is not lost
+                    if (!"lost".equals(loan.getBookCondition())) {
+                        upd.setInt(1, loan.getBookId());
+                        int n = upd.executeUpdate();
+                        if (n != 1) {
+                            conn.rollback();
+                            view.showError("Could not update book stock for: " + loan.getBookTitle());
+                            rolledBack = true;
+                            break;
+                        }
                     }
                     successCount++;
                 } catch (SQLException ex) {
                     conn.rollback();
-                    conn.setAutoCommit(true);
                     if (ex.getErrorCode() == 1062 || (ex.getMessage() != null && ex.getMessage().contains("Duplicate"))) {
                         errors.append(loan.getBookTitle()).append(" was already returned.\n");
                     } else {
                         errors.append("Error returning ").append(loan.getBookTitle()).append(": ").append(ex.getMessage()).append("\n");
                     }
+                    rolledBack = true;
+                    break;
                 }
             }
 
-            conn.commit();
+            if (!rolledBack) {
+                conn.commit();
+            }
             conn.setAutoCommit(true);
 
             if (errors.length() > 0) {
